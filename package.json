@@ -1,0 +1,11 @@
+{
+  "name": "lolvods",
+  "version": "0.0.1",
+  "description": "Semi-spoiler free League of Legends VODs",
+  "main": "update-divshot.js",
+  "author": "Adam Buechler",
+  "license": "ISC",
+  "dependencies": {
+    "divshot-push": "^1.4.2"
+  }
+}
