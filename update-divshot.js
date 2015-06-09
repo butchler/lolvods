@@ -10,13 +10,13 @@ var now = new Date();
 var twoWeeksAgo = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 7 * 2);
 
 
-
-chain(getProgrammingBlocks, twoWeeksAgo, now)
-    .and(getMatchIDs)
-    .and(getGames)
-    .and(generateHTML)
-    .and(writeToFile, './app/index.html');
-//    .and(pushToDivshot, process.cwd() + '/app');
+chain([
+        [getProgrammingBlocks, twoWeeksAgo, now],
+        getMatchIDs,
+        getGames,
+        generateHTML,
+        [writeToFile, './app/index.html']
+]);
 
 function getProgrammingBlocks(fromTime, toTime, callback) {
     var apiUrl = 'http://na.lolesports.com/api/programming.json?' +
@@ -109,63 +109,58 @@ function formatTime(date) {
     return yyyy + '-' + MM + '-' + dd + ' ' + hh + ':' + mm;
 }
 
-function chain() {
-    if (arguments.length < 1)
-        throw new Error('chain() requires at least one argument (the function to call).');
-
-    // The first argument is the function to call.
-    var f = arguments[0];
-
-    if (typeof f !== 'function')
-        throw new Error('The first argument to chain()/and() must be a function.');
-
-    var andArguments = null;
-    var returnCallback = function (result) {
-        // If and() was called, call the next function in the chain, passing
-        // along the result as the last argument before the callback argument.
-        if (andArguments !== null) {
-            var args = argumentsToArray(andArguments);
-            args.push(result);
-            chain.apply(null, args);
-        }
-    };
-
-    // Add the callback function as the last argument and call the function.
-    var args = argumentsToArray(arguments).slice(1);
-    args.push(returnCallback);
-    console.log('chain() args for ' + f.name + ': ' + args);
-    var result = f.apply(null, args);
-
-    // If the function returns a result, just call the next function in the
-    // chain immediately.
-    if (result !== undefined)
-        return {
-            and: function () {
-                andArguments = arguments;
-                returnCallback(result);
-                // FIXME: Needs to return something
-            }
-        };
-    // Otherwise, save the next function in the chain so that we can call it
-    // when the returnCallback is called.
-    else
-        return {
-            and: function () {
-                // Save all of the arguments passed to and (the first argument
-                // is the function, followed by arguments to the function).
-                andArguments = arguments;
-                // FIXME: Needs to return something
-            }
-        };
 }
 
-// Converts an arguments object into an array.
-// According to MDN (https://developer.mozilla.org/en/docs/Web/JavaScript/Reference/Functions/arguments),
-// using Array.slice on arguments prevents browser optimizations, so use a
-// loop to create a new array instead.
-function argumentsToArray(args) {
-    var array = [];
-    for (var i = 0; i < args.length; i += 1)
-        array.push(args[i]);
-    return array;
+// Takes an array of functions (or an array with a function as the first
+// argument and a list of arguments to that function), and calls the functions
+// using callbacks, so that they can easily be chained together even if they
+// don't return their results immediately.
+//
+// chain([a, [b, 1, 2, 3], c])
+//
+// is equivalent to
+//
+// a(function (result) {
+//     b(1, 2, 3, result, function (result) {
+//         c(result);
+//     });
+// });
+function chain(functions, result, index) {
+    // Validate index.
+    if (typeof index === 'undefined')
+        index = 0;
+    if (typeof index !== 'number')
+        throw new Error('Bad index for chain(). ' +
+                'Only one argument should be passed to chain().');
+
+    // Stop when we've reached the end of the function list.
+    if (index >= functions.length)
+        return;
+
+    var f = functions[index];
+    var args = [];
+
+    if (Array.isArray(f)) {
+        args = f.slice(1);
+        f = f[0];
+    }
+
+    if (typeof f !== 'function')
+        throw new Error('Arguments in array passed to chain() must be ' +
+                'functions, or arrays with a function as the first element.');
+
+    if (result !== undefined)
+        args.push(result);
+
+    var onResult = function (nextResult) {
+        chain(functions, nextResult, index + 1);
+    };
+    args.push(onResult);
+
+    var nextResult = f.apply(null, args);
+
+    // If the function returns a result immediately instead of using the
+    // callback, call the next function in the chain immediately.
+    if (nextResult !== undefined)
+        chain(functions, nextResult, index + 1);
 }
