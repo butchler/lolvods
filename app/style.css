@@ -1,0 +1,49 @@
+.icon {
+    width: 15px;
+    height: 15px;
+}
+.kill-icon {
+    fill: #d00;
+}
+.gold-icon {
+    fill: #dd0;
+}
+.team-logo {
+    width: 40px;
+    height: auto;
+}
+
+body {
+    font-size: 85%;
+    font-family: "Open Sans", sans-serif;
+    background-color: #222;
+    color: white;
+}
+
+header {
+    text-align: center;
+}
+
+a.vod {
+    text-decoration: none;
+    color: inherit;
+}
+
+.game {
+    margin: 1em;
+    padding: 1em;
+    list-style: none;
+    background-color: #333;
+}
+.game:hover {
+    background-color: #444;
+}
+
+.teams, .kills, .gold, .game-length, .game-number {
+    display: inline-block;
+    width: 100px;
+}
+
+.teams {
+    width: 300px;
+}

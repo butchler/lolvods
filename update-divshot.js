@@ -2,22 +2,22 @@ var fs = require('fs');
 var http = require('http');
 var push = require('divshot-push');
 
+// Use the (not yet released) League API to fetch infor for all the games from
+// the past two weeks, and generate a web page showing a list of the games and
+// links to their videos. Then, upload the web page to Divshot in order to
+// serve it statically and efficiently.
+
 if (!process.env.DIVSHOT_TOKEN)
     throw new Error('DIVSHOT_TOKEN environment variable is not set.');
 
-var now = new Date();
 // Subtract the number of milliseconds in two weeks from the current date.
-//var twoWeeksAgo = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 7 * 2);
-var twoWeeksAgo = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 2);
-
-// Use the (not yet released) League API to fetch infor for all the games from
-// the past two weeks, and generate a web page showing a list of the games and
-// links to their videos.
+var now = new Date();
+var twoWeeksAgo = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 7 * 2);
 chain([
         [getProgrammingBlocks, twoWeeksAgo, now],
         getGameIds,
         getGameInfos,
-        generateHTML,
+        generateHtml,
         [writeToFile, './app/index.html'],
         //[pushToDivshot, process.cwd() + '/app']
 ]);
@@ -55,9 +55,20 @@ function getGameIds(programmingBlocks) {
                             if (games.hasOwnProperty(key) &&
                                     games[key].hasOwnProperty('id')) {
                                 var id = games[key].id;
+
                                 // Verify that the ID is a number.
-                                if (parseInt(id, 10) != NaN)
-                                    gameIds.push(id);
+                                if (parseInt(id, 10) != NaN) {
+                                    var game = {id: id, matchTime: null};
+
+                                    // Also save the datetime of the match,
+                                    // since the datetime that the API reports
+                                    // for individual games is sometimes null,
+                                    // so we can't use it for sorting the games.
+                                    if (Date.parse(match.dateTime) != NaN)
+                                        game.matchTime = match.dateTime;
+
+                                    gameIds.push(game);
+                                }
                             }
                         }
                     }
@@ -85,13 +96,13 @@ function getGameInfos(gameIds, callback) {
     function getInfo(gameId) {
         // If there are too many simultaneous requests, try again after a delay.
         if (numRequests >= maxRequests) {
-            setTimeout(function () { getInfo(gameId); }, 100);
+            setTimeout(function () { getInfo(gameId); }, 10);
             return;
         }
 
         numRequests += 1;
 
-        var apiUrl = 'http://na.lolesports.com/api/game/' + gameId + '.json';
+        var apiUrl = 'http://na.lolesports.com/api/game/' + gameId.id + '.json';
 
         getAll(apiUrl,
                 // On success
@@ -99,6 +110,7 @@ function getGameInfos(gameIds, callback) {
                     console.log('getGameInfos() received: ' + data);
 
                     var gameInfo = JSON.parse(data);
+                    gameInfo.matchTime = gameId.matchTime;
 
                     gameInfos.push(gameInfo);
                 },
@@ -146,67 +158,150 @@ function getAll(url, onSuccess, onError, onSuccessOrError) {
     });
 }
 
-function generateHTML(games) {
-    // TODO: Sort games newest to oldest.
-    // Cannot use game.dateTime because it seems to have the same time for all
-    // games in the same block. Probably have to get the time from the match
+function generateHtml(games, callback) {
+    // Sort games based on the match time, as opposed to the individual game
+    // time, because the API sometimes returns null or wrong datetimes for game
     // info.
+    games.sort(function (a, b) {
+        var aTime = Date.parse(a.matchTime), bTime = Date.parse(b.matchTime);
 
-    var body =
-['body',
-    ['h1.title', 'Semi-spoiler free League of Legends VODs'],
-    ['ul.games',
-        games.map(function (game) {
-            // Calculate teams' total gold and kills from individual players' info.
-            var blueTeamKills = redTeamKills = blueTeamGold = redTeamGold = 0;
-            var blueTeamId = game.contestants.blue.id.toString();
-            var redTeamId = game.contestants.red.id.toString();
-            for (key in game.players) {
-                if (game.players.hasOwnProperty(key)) {
-                    var player = game.players[key];
+        if (aTime != NaN && bTime != NaN)
+            // Sort in descending order based on match time.
+            return bTime - aTime;
+        else
+            return 0;
+    });
 
-                    if (player.teamId.toString() === blueTeamId) {
-                        blueTeamKills += player.kills;
-                        blueTeamGold += player.totalGold;
-                    }
-                    if (player.teamId.toString() === redTeamId) {
-                        redTeamKills += player.kills;
-                        redTeamGold += player.totalGold;
-                    }
+    fs.readFile('./icons.svg', function (error, data) {
+        if (error)
+            throw new Error('Error reading SVG icons file: ' + error);
+
+        var iconDefinitions = data.toString();
+
+        var output = 
+            '<!doctype html>' +
+            html(['html',
+                    ['head',
+                        ['title', 'Semi-spoiler free League VODs'],
+                        ['link', {href: 'style.css', rel: 'stylesheet'}]],
+                        "<link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700,300' rel='stylesheet' type='text/css'>",
+                    ['body',
+                        iconDefinitions,
+                        ['header',
+                            ['h1.title', 'Semi-spoiler free League of Legends VODs']],
+                        ['main',
+                            ['ul.games', games.map(generateGameHtml)]],
+                        ['footer',
+                            '<div>Icons made by <a href="http://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>',
+                            '<div>Icons made by <a href="http://www.flaticon.com/authors/simpleicon" title="SimpleIcon">SimpleIcon</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>']]]);
+
+        callback(output);
+    });
+}
+
+function generateGameHtml(game) {
+    // If the game doesn't have a video URL yet, don't list it.
+    if (get(game, ['vods', 'vod', 'URL']) === undefined)
+        return [];
+
+    // Call decodeURIComponent on the URL to unescape any URL parameters, such
+    // as time offset parameters for YouTube links.
+    var vodUrl = decodeURIComponent(get(game, ['vods', 'vod', 'URL'], '#'));
+
+    // Calculate teams' total gold and kills from individual players' info.
+    var blueTeamKills = redTeamKills = blueTeamGold = redTeamGold = 0;
+    var blueTeamId = get(game, ['contestants', 'blue', 'id'], 0).toString();
+    var redTeamId = get(game, ['contestants', 'red', 'id'], 0).toString();
+    if (game.players) {
+        for (key in game.players) {
+            if (game.players.hasOwnProperty(key)) {
+                var player = game.players[key];
+
+                if (player.teamId && player.teamId.toString() === blueTeamId) {
+                    blueTeamKills += player.kills;
+                    blueTeamGold += player.totalGold;
+                }
+                if (player.teamId && player.teamId.toString() === redTeamId) {
+                    redTeamKills += player.kills;
+                    redTeamGold += player.totalGold;
                 }
             }
+        }
+    }
 
-            // Convert game length to mm:ss format.
-            var minutes = Math.floor(game.gameLength / 60);
-            var seconds = game.gameLength % 60;
-            var gameLength = padZero(minutes) + ':' + padZero(seconds);
+    // Convert game length to mm:ss format.
+    var gameLength = null;
+    if (game.gameLength) {
+        var minutes = Math.floor(game.gameLength / 60);
+        var seconds = game.gameLength % 60;
+        gameLength = padZero(minutes) + ':' + padZero(seconds);
+    }
 
-            // Format gold as a string.
-            blueTeamGoldString = (blueTeamGold / 1000).toFixed(1) + 'k';
-            redTeamGoldString = (redTeamGold / 1000).toFixed(1) + 'k';
+    // Format gold as a string.
+    blueTeamGoldString = (blueTeamGold / 1000).toFixed(1) + 'k';
+    redTeamGoldString = (redTeamGold / 1000).toFixed(1) + 'k';
 
-            return ['a', {href: game.vods.vod.URL},
-                        ['li.game',
-                            ['div.teams',
-                                ['span.team-name', game.contestants.blue.name],
-                                ['span.vs-icon', ' vs. '],
-                                ['span.team-name', game.contestants.red.name]],
-                            ['div.game-length', gameLength],
-                            ['div.kills',
-                                ['span.kill-score', blueTeamKills],
-                                ['span.kill-icon', ' vs. '],
-                                ['span.kill-score', redTeamKills]],
-                            ['div.gold',
-                                ['span.gold-score', blueTeamGoldString],
-                                ['span.gold-icon', ' vs. '],
-                                ['span.gold-score', redTeamGoldString]]]];
-        })]];
+    // Get the logo URL from the game info, but rewrite the URL to point to a smaller version of the logo.
+    // TODO: Get the small logo URL from the match info instead of hackily rewriting the URL.
+    blueTeamLogo = get(game, ['contestants', 'blue', 'logoURL'], '').replace('s3fs-public/', 's3fs-public/styles/grid_medium_square/public/');
+    redTeamLogo = get(game, ['contestants', 'red', 'logoURL'], '').replace('s3fs-public/', 's3fs-public/styles/grid_medium_square/public/');
 
-    return '<!doctype html>' +
-        html(['html',
-                ['head',
-                    ['title', 'Semi-spoiler free League VODs']],
-                body]);
+    hasMultipleGames = game.maxGames && parseInt(game.maxGames, 10) > 1;
+
+    return ['a.vod', {href: vodUrl},
+               ['li.game',
+                    !game.contestants ? null :
+                    ['div.teams',
+                        ['span.team',
+                            blueTeamLogo ? ['img.team-logo', {src: blueTeamLogo}] : null,
+                            ['span.team-name', get(game, ['contestants', 'blue', 'name'], 'Blue')]],
+                        ['span.vs', ' vs. '],
+                        ['span.team',
+                            redTeamLogo ? ['img.team-logo', {src: redTeamLogo}] : null,
+                            ['span.team-name', get(game, ['contestants', 'red', 'name'], 'Red')]]],
+                    (hasMultipleGames && game.gameNumber) ? ['div.game-number', 'Game ' + game.gameNumber] : null,
+                    gameLength === null ? null :
+                    ['div.game-length', gameLength],
+                    (blueTeamKills === 0 && redTeamKills === 0) ? null :
+                    ['div.kills',
+                        ['span.kill-score', blueTeamKills],
+                        // Show "vs." instead of the icon for browsers that don't support SVG.
+                        ['svg', {class: 'icon kill-icon'}, '<use xlink:href="#sword"> vs. </use>'],
+                        ['span.kill-score', redTeamKills]],
+                    (blueTeamGold === 0 && redTeamGold === 0) ? null :
+                    ['div.gold',
+                        ['span.gold-score', blueTeamGoldString],
+                        ['svg', {class: 'icon gold-icon'}, '<use xlink:href="#coins"> vs. </use>'],
+                        ['span.gold-score', redTeamGoldString]]]];
+}
+
+// Used to access nested properties of an object when you're not sure if the
+// object actually has those properties. Returns fallbackValue if the object
+// doesn't have the nested property.
+//
+// get(object, ['foo', 'bar'], 'Could not find foo bar')
+//
+// is equivalent to
+//
+// (function () {
+//     if (object.hasOwnProperty('foo')) {
+//         if (object.foo.hasOwnProperty('bar')) {
+//             return object.foo.bar;
+//         }
+//     }
+//
+//     return 'Could not find foo bar';
+// })
+function get(object, keys, fallbackValue) {
+    for (var i = 0; i < keys.length; i += 1) {
+        var key = keys[i];
+        if (object !== null && typeof object === 'object' && object.hasOwnProperty(key))
+            object = object[key];
+        else
+            return fallbackValue;
+    }
+
+    return object;
 }
 
 // Recursively generates HTML given an array of tag names, attributes, and
@@ -218,9 +313,8 @@ function generateHTML(games) {
 //
 // '<p>Hello, world <a href="http://example.com">Here's a link!</a></p>'
 function html(tags) {
-    if (tags.length < 1)
-        throw new Error('The array passed to html() must have at least one ' +
-                'element (the tag name): ' + JSON.stringify(tags));
+    if (tags.length === 0)
+        return '';
 
     // If the argument is a list of arrays, apply html() to each array in the
     // list and return the concatenated output.
@@ -269,10 +363,16 @@ function html(tags) {
     for (var i = hasAttributes ? 2 : 1; i < tags.length; i += 1) {
         var element = tags[i];
 
-        if (Array.isArray(element))
+        if (element === undefined)
+            throw new Error('Elements passed to html() cannot be undefined: ' + JSON.stringify(tags));
+
+        if (element === null)
+            continue;
+        else if (Array.isArray(element))
             output += html(element);
-        else
+        else {
             output += element.toString();
+        }
     }
 
     output += '</' + tag + '>';
