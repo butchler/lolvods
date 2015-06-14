@@ -1,6 +1,7 @@
 var fs = require('fs');
 var http = require('http');
 var push = require('divshot-push');
+var util = require('./util.js');
 
 // Use the (not yet released) League API to fetch infor for all the games from
 // the past two weeks, and generate a web page showing a list of the games and
@@ -13,7 +14,7 @@ if (!process.env.DIVSHOT_TOKEN)
 // Subtract the number of milliseconds in two weeks from the current date.
 var now = new Date();
 var twoWeeksAgo = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 7 * 2);
-chain([
+util.chain([
         [getProgrammingBlocks, twoWeeksAgo, now],
         getGameIds,
         getGameInfos,
@@ -25,10 +26,10 @@ chain([
 function getProgrammingBlocks(fromTime, toTime, callback) {
     var apiUrl = 'http://na.lolesports.com/api/programming.json?' +
         'parameters[method]=time&parameters[expand_matches]=1' +
-        '&parameters[time]=' + formatTime(fromTime) +
-        '&parameters[timeTo]=' + formatTime(toTime);
+        '&parameters[time]=' + util.formatTime(fromTime) +
+        '&parameters[timeTo]=' + util.formatTime(toTime);
 
-    getAll(apiUrl,
+    util.getAll(apiUrl,
             function (data) {
                 console.log('getProgrammingBlocks() received: ' + data);
 
@@ -104,7 +105,7 @@ function getGameInfos(gameIds, callback) {
 
         var apiUrl = 'http://na.lolesports.com/api/game/' + gameId.id + '.json';
 
-        getAll(apiUrl,
+        util.getAll(apiUrl,
                 // On success
                 function (data) {
                     console.log('getGameInfos() received: ' + data);
@@ -130,34 +131,6 @@ function getGameInfos(gameIds, callback) {
     gameIds.forEach(getInfo);
 }
 
-// Wrapper for http.get that gets all of the data from the response before
-// calling the onSuccess function.
-function getAll(url, onSuccess, onError, onSuccessOrError) {
-    console.log("Getting URL '" + url + "'.");
-
-    http.get(url, function (response) {
-        if (response.statusCode !== 200)
-            throw new Error('HTTP response returned status code ' +
-                    response.statusCode + ' instead of 200.');
-
-        var data = '';
-        response.on('data', function (chunk) {
-            data += chunk;
-        });
-        response.on('end', function () {
-            if (onSuccess !== undefined)
-                onSuccess(data);
-            if (onSuccessOrError !== undefined)
-                onSuccessOrError('success', data);
-        });
-    }).on('error', function (error) {
-        if (onError !== undefined)
-            onError(error);
-        if (onSuccessOrError !== undefined)
-            onSuccessOrError('error', error);
-    });
-}
-
 function generateHtml(games, callback) {
     // Sort games based on the match time, as opposed to the individual game
     // time, because the API sometimes returns null or wrong datetimes for game
@@ -180,7 +153,7 @@ function generateHtml(games, callback) {
 
         var output = 
             '<!doctype html>' +
-            html(['html',
+            util.html(['html',
                     ['head',
                         ['title', 'Semi-spoiler free League VODs'],
                         ['link', {href: 'style.css', rel: 'stylesheet'}]],
@@ -201,17 +174,17 @@ function generateHtml(games, callback) {
 
 function generateGameHtml(game) {
     // If the game doesn't have a video URL yet, don't list it.
-    if (get(game, ['vods', 'vod', 'URL']) === undefined)
+    if (util.get(game, ['vods', 'vod', 'URL']) === undefined)
         return [];
 
     // Call decodeURIComponent on the URL to unescape any URL parameters, such
     // as time offset parameters for YouTube links.
-    var vodUrl = decodeURIComponent(get(game, ['vods', 'vod', 'URL'], '#'));
+    var vodUrl = decodeURIComponent(util.get(game, ['vods', 'vod', 'URL'], '#'));
 
     // Calculate teams' total gold and kills from individual players' info.
     var blueTeamKills = redTeamKills = blueTeamGold = redTeamGold = 0;
-    var blueTeamId = get(game, ['contestants', 'blue', 'id'], 0).toString();
-    var redTeamId = get(game, ['contestants', 'red', 'id'], 0).toString();
+    var blueTeamId = util.get(game, ['contestants', 'blue', 'id'], 0).toString();
+    var redTeamId = util.get(game, ['contestants', 'red', 'id'], 0).toString();
     if (game.players) {
         for (key in game.players) {
             if (game.players.hasOwnProperty(key)) {
@@ -234,7 +207,7 @@ function generateGameHtml(game) {
     if (game.gameLength) {
         var minutes = Math.floor(game.gameLength / 60);
         var seconds = game.gameLength % 60;
-        gameLength = padZero(minutes) + ':' + padZero(seconds);
+        gameLength = util.padZero(minutes) + ':' + util.padZero(seconds);
     }
 
     // Format gold as a string.
@@ -243,8 +216,8 @@ function generateGameHtml(game) {
 
     // Get the logo URL from the game info, but rewrite the URL to point to a smaller version of the logo.
     // TODO: Get the small logo URL from the match info instead of hackily rewriting the URL.
-    blueTeamLogo = get(game, ['contestants', 'blue', 'logoURL'], '').replace('s3fs-public/', 's3fs-public/styles/grid_medium_square/public/');
-    redTeamLogo = get(game, ['contestants', 'red', 'logoURL'], '').replace('s3fs-public/', 's3fs-public/styles/grid_medium_square/public/');
+    blueTeamLogo = util.get(game, ['contestants', 'blue', 'logoURL'], '').replace('s3fs-public/', 's3fs-public/styles/grid_medium_square/public/');
+    redTeamLogo = util.get(game, ['contestants', 'red', 'logoURL'], '').replace('s3fs-public/', 's3fs-public/styles/grid_medium_square/public/');
 
     hasMultipleGames = game.maxGames && parseInt(game.maxGames, 10) > 1;
 
@@ -254,11 +227,11 @@ function generateGameHtml(game) {
                     ['div.teams',
                         ['span.team',
                             blueTeamLogo ? ['img.team-logo', {src: blueTeamLogo}] : null,
-                            ['span.team-name', get(game, ['contestants', 'blue', 'name'], 'Blue')]],
+                            ['span.team-name', util.get(game, ['contestants', 'blue', 'name'], 'Blue')]],
                         ['span.vs', ' vs. '],
                         ['span.team',
                             redTeamLogo ? ['img.team-logo', {src: redTeamLogo}] : null,
-                            ['span.team-name', get(game, ['contestants', 'red', 'name'], 'Red')]]],
+                            ['span.team-name', util.get(game, ['contestants', 'red', 'name'], 'Red')]]],
                     (hasMultipleGames && game.gameNumber) ? ['div.game-number', 'Game ' + game.gameNumber] : null,
                     gameLength === null ? null :
                     ['div.game-length', gameLength],
@@ -275,112 +248,7 @@ function generateGameHtml(game) {
                         ['span.gold-score', redTeamGoldString]]]];
 }
 
-// Used to access nested properties of an object when you're not sure if the
-// object actually has those properties. Returns fallbackValue if the object
-// doesn't have the nested property.
-//
-// get(object, ['foo', 'bar'], 'Could not find foo bar')
-//
-// is equivalent to
-//
-// (function () {
-//     if (object.hasOwnProperty('foo')) {
-//         if (object.foo.hasOwnProperty('bar')) {
-//             return object.foo.bar;
-//         }
-//     }
-//
-//     return 'Could not find foo bar';
-// })
-function get(object, keys, fallbackValue) {
-    for (var i = 0; i < keys.length; i += 1) {
-        var key = keys[i];
-        if (object !== null && typeof object === 'object' && object.hasOwnProperty(key))
-            object = object[key];
-        else
-            return fallbackValue;
-    }
-
-    return object;
-}
-
-// Recursively generates HTML given an array of tag names, attributes, and
-// contents.
-//
-// html(['p' 'Hello, world ' ['a' {href: 'http://example.com/'} "Here's a link!"])
-//
-// returns
-//
-// '<p>Hello, world <a href="http://example.com">Here's a link!</a></p>'
-function html(tags) {
-    if (tags.length === 0)
-        return '';
-
-    // If the argument is a list of arrays, apply html() to each array in the
-    // list and return the concatenated output.
-    if (tags.every(Array.isArray)) {
-        return String.prototype.concat.apply('', tags.map(html));
-    }
-
-    var tag = tags[0];
-    if (typeof tag !== 'string')
-        throw new Error('First element in array for html() must be a string or array: ' + JSON.stringify(tags));
-
-    // Check if there is an attributes object.
-    var attributes = null;
-    var hasAttributes = false;
-    if (tags.length >= 1 && typeof tags[1] === 'object' && !Array.isArray(tags[1])) {
-        attributes = tags[1];
-        hasAttributes = true;
-    }
-
-    // If tag name contains a period, make everything after the period the
-    // class name.
-    var classMatch = /\.(.*)/.exec(tag);
-    if (classMatch !== null) {
-        var className = classMatch[1];
-        attributes = attributes || {};
-        attributes.class = className;
-
-        // Remove the class name from the tag.
-        tag = tag.replace(/\..*/, '');
-    }
-
-    var output = '<' + tag;
-    if (attributes !== null) {
-        // TODO: Validate attributes.
-        for (key in attributes) {
-            if (attributes.hasOwnProperty(key)) {
-                // Escape any quotation marks in the value string
-                var value = attributes[key].replace(/"/, '\\"');
-                output += ' ' + key + '="' + value + '"';
-            }
-        }
-    }
-    output += '>';
-
-    // TODO: Insert new lines and spaces to make the output readable.
-    for (var i = hasAttributes ? 2 : 1; i < tags.length; i += 1) {
-        var element = tags[i];
-
-        if (element === undefined)
-            throw new Error('Elements passed to html() cannot be undefined: ' + JSON.stringify(tags));
-
-        if (element === null)
-            continue;
-        else if (Array.isArray(element))
-            output += html(element);
-        else {
-            output += element.toString();
-        }
-    }
-
-    output += '</' + tag + '>';
-
-    return output;
-}
-
-function writeToFile(filename, data, doneCallback) {
+function writeToFile (filename, data, doneCallback) {
     fs.writeFile(filename, data, function (error) {
         if (error) {
             console.log("Error creating '" + filename + "'.");
@@ -416,78 +284,4 @@ function pushToDivshot(root, doneCallback) {
     };
     pushStatus.onUpload('error', onError);
     pushStatus.onError(onError);
-}
-
-// Takes a Date object and returns a string of the form 'yyyy-MM-dd hh:mm'.
-function formatTime(date) {
-
-    var yyyy = date.getFullYear().toString();
-    // Months returned by Date.getMonth() start from zero.
-    var MM = padZero(date.getMonth() + 1);
-    var dd = padZero(date.getDate());
-    // Date.getHours() also counts from zero.
-    var hh = padZero(date.getHours() + 1);
-    var mm = padZero(date.getMinutes());
-
-    return yyyy + '-' + MM + '-' + dd + ' ' + hh + ':' + mm;
-}
-
-// Takes a number and converts it to a strong, adding a '0' the beginning if
-// the number is less than 10.
-function padZero(n) {
-    return (n < 10 ? '0' : '') + n.toString();
-}
-
-// Takes an array of functions (or an array with a function as the first
-// argument and a list of arguments to that function), and calls the functions
-// using callbacks, so that they can easily be chained together even if they
-// don't return their results immediately.
-//
-// chain([a, [b, 1, 2, 3], c])
-//
-// is equivalent to
-//
-// a(function (result) {
-//     b(1, 2, 3, result, function (result) {
-//         c(result);
-//     });
-// });
-function chain(functions, result, index) {
-    // Validate index.
-    if (typeof index === 'undefined')
-        index = 0;
-    if (typeof index !== 'number')
-        throw new Error('Bad index for chain(). ' +
-                'Only one argument should be passed to chain().');
-
-    // Stop when we've reached the end of the function list.
-    if (index >= functions.length)
-        return;
-
-    var f = functions[index];
-    var args = [];
-
-    if (Array.isArray(f)) {
-        args = f.slice(1);
-        f = f[0];
-    }
-
-    if (typeof f !== 'function')
-        throw new Error('Arguments in array passed to chain() must be ' +
-                'functions, or arrays with a function as the first element.');
-
-    if (result !== undefined)
-        args.push(result);
-
-    var onResult = function (nextResult) {
-        chain(functions, nextResult, index + 1);
-    };
-    args.push(onResult);
-
-    var nextResult = f.apply(null, args);
-
-    // If the function returns a result immediately instead of using the
-    // callback, call the next function in the chain immediately.
-    if (nextResult !== undefined)
-        chain(functions, nextResult, index + 1);
 }
