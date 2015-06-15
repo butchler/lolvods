@@ -266,7 +266,7 @@ function pushToDivshot(root, doneCallback) {
     // Push generated index.html to Divshot.
     var pushStatus = push({
         root: root,
-        environment: 'development',
+        environment: 'production',
         config: { name: 'lolvods', 'clean_urls': true },
         token: process.env.DIVSHOT_TOKEN
     });
