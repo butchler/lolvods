@@ -20,7 +20,7 @@ util.chain([
         getGameInfos,
         generateHtml,
         [writeToFile, './app/index.html'],
-        //[pushToDivshot, process.cwd() + '/app']
+        [pushToDivshot, process.cwd() + '/app']
 ]);
 
 function getProgrammingBlocks(fromTime, toTime, callback) {
