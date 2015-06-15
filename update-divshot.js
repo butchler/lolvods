@@ -157,7 +157,7 @@ function generateHtml(games, callback) {
                     ['head',
                         ['title', 'Semi-spoiler free League VODs'],
                         ['link', {href: 'style.css', rel: 'stylesheet'}]],
-                        "<link href='http://fonts.googleapis.com/css?family=Open+Sans:400,700,300' rel='stylesheet' type='text/css'>",
+                        "<link href='http://fonts.googleapis.com/css?family=Roboto+Condensed' rel='stylesheet' type='text/css'>",
                     ['body',
                         iconDefinitions,
                         ['header',
@@ -165,8 +165,7 @@ function generateHtml(games, callback) {
                         ['main',
                             ['ul.games', games.map(generateGameHtml)]],
                         ['footer',
-                            '<div>Icons made by <a href="http://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>',
-                            '<div>Icons made by <a href="http://www.flaticon.com/authors/simpleicon" title="SimpleIcon">SimpleIcon</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a> is licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>']]]);
+                            '<div>Icons made by <a href="http://www.flaticon.com/authors/freepik" title="Freepik">Freepik</a> and <a href="http://www.flaticon.com/authors/simpleicon" title="SimpleIcon">SimpleIcon</a> from <a href="http://www.flaticon.com" title="Flaticon">www.flaticon.com</a>, licensed by <a href="http://creativecommons.org/licenses/by/3.0/" title="Creative Commons BY 3.0">CC BY 3.0</a></div>']]]);
 
         callback(output);
     });
@@ -234,7 +233,9 @@ function generateGameHtml(game) {
                             ['span.team-name', util.get(game, ['contestants', 'red', 'name'], 'Red')]]],
                     (hasMultipleGames && game.gameNumber) ? ['div.game-number', 'Game ' + game.gameNumber] : null,
                     gameLength === null ? null :
-                    ['div.game-length', gameLength],
+                    ['div.game-length',
+                        ['div', ['svg', {class: 'icon time-icon'}, '<use xlink:href="#clock"></use>']],
+                        gameLength],
                     (blueTeamKills === 0 && redTeamKills === 0) ? null :
                     ['div.kills',
                         ['span.kill-score', blueTeamKills],
