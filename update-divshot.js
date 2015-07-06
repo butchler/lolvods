@@ -15,12 +15,29 @@ if (!process.env.DIVSHOT_TOKEN)
 var now = new Date();
 var twoWeeksAgo = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 7 * 2);
 util.chain([
-        [getProgrammingBlocks, twoWeeksAgo, now],
+        function (callback) {
+            getProgrammingBlocks(twoWeeksAgo, now, callback);
+        },
         getGameIds,
         getGameInfos,
+        /*function (games, callback) {
+            writeToFile('./games.json', JSON.stringify(games), callback);
+        }*/
+        /*function (callback) {
+            fs.readFile('./games.json', function (error, data) {
+                if (error)
+                    throw error;
+
+                callback(JSON.parse(data.toString()));
+            });
+        },*/
         generateHtml,
-        [writeToFile, './app/index.html'],
-        [pushToDivshot, process.cwd() + '/app']
+        function (html, callback) {
+            writeToFile('./app/index.html', html, callback);
+        },
+        function () {
+            pushToDivshot(process.cwd() + '/app');
+        }
 ]);
 
 function getProgrammingBlocks(fromTime, toTime, callback) {

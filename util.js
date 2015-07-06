@@ -161,20 +161,19 @@ exports.formatTime = function(date) {
 // using callbacks, so that they can easily be chained together even if they
 // don't return their results immediately.
 //
-// chain([a, [b, 1, 2, 3], c])
+// chain([a, b, c]);
 //
 // is equivalent to
 //
 // a(function (result) {
-//     b(1, 2, 3, result, function (result) {
-//         c(result);
+//     b(result, function (result2) {
+//         c(result2);
 //     });
 // });
-function chain(functions, result, index) {
+function chain(functions, previousResult, index) {
     // Validate index.
-    if (typeof index === 'undefined')
-        index = 0;
-    if (typeof index !== 'number')
+    index = index || 0;
+    if (typeof index !== 'number' || index < 0)
         throw new Error('Bad index for chain(). ' +
                 'Only one argument should be passed to chain().');
 
@@ -183,30 +182,18 @@ function chain(functions, result, index) {
         return;
 
     var f = functions[index];
-    var args = [];
-
-    if (Array.isArray(f)) {
-        args = f.slice(1);
-        f = f[0];
-    }
-
     if (typeof f !== 'function')
-        throw new Error('Arguments in array passed to chain() must be ' +
-                'functions, or arrays with a function as the first element.');
+        throw new Error('Arguments in array passed to chain() must be functions.');
 
-    if (result !== undefined)
-        args.push(result);
-
-    var onResult = function (nextResult) {
+    var callback = function (nextResult) {
         chain(functions, nextResult, index + 1);
     };
-    args.push(onResult);
 
-    var nextResult = f.apply(null, args);
+    var nextResult = (previousResult === undefined) ? f(callback) : f(previousResult, callback);
 
     // If the function returns a result immediately instead of using the
     // callback, call the next function in the chain immediately.
     if (nextResult !== undefined)
-        chain(functions, nextResult, index + 1);
+        callback(nextResult);
 };
 exports.chain = chain;
