@@ -174,7 +174,7 @@ function generateHtml(games, callback) {
                     ['head',
                         ['title', 'Semi-spoiler free League VODs'],
                         ['link', {href: 'style.css', rel: 'stylesheet'}]],
-                        "<link href='http://fonts.googleapis.com/css?family=Roboto+Condensed' rel='stylesheet' type='text/css'>",
+                        "<link href='http://fonts.googleapis.com/css?family=Roboto+Condensed:400,700' rel='stylesheet' type='text/css'>",
                     ['body',
                         iconDefinitions,
                         ['header',
@@ -239,7 +239,7 @@ function generateGameHtml(game) {
 
     return ['a.vod', {href: vodUrl},
                ['li.game',
-                    !game.contestants ? null :
+                    !game.contestants ? ['div.teams'] :
                     ['div.teams',
                         ['span.team',
                             blueTeamLogo ? ['img.team-logo', {src: blueTeamLogo}] : null,
@@ -247,19 +247,19 @@ function generateGameHtml(game) {
                         ['span.vs', ' vs. '],
                         ['span.team',
                             redTeamLogo ? ['img.team-logo', {src: redTeamLogo}] : null,
-                            ['span.team-name', util.get(game, ['contestants', 'red', 'name'], 'Red')]]],
-                    (hasMultipleGames && game.gameNumber) ? ['div.game-number', 'Game ' + game.gameNumber] : null,
-                    gameLength === null ? null :
+                            ['span.team-name', util.get(game, ['contestants', 'red', 'name'], 'Red')]],
+                        (hasMultipleGames && game.gameNumber) ? ['div.game-number', 'Game ' + game.gameNumber] : ['div.game-number']],
+                    gameLength === null ? ['div.game-length'] :
                     ['div.game-length',
                         ['div', ['svg', {class: 'icon time-icon'}, '<use xlink:href="#clock"></use>']],
                         gameLength],
-                    (blueTeamKills === 0 && redTeamKills === 0) ? null :
+                    (blueTeamKills === 0 && redTeamKills === 0) ? ['div.kills'] :
                     ['div.kills',
                         ['span.kill-score', blueTeamKills],
                         // Show "vs." instead of the icon for browsers that don't support SVG.
                         ['svg', {class: 'icon kill-icon'}, '<use xlink:href="#sword"> vs. </use>'],
                         ['span.kill-score', redTeamKills]],
-                    (blueTeamGold === 0 && redTeamGold === 0) ? null :
+                    (blueTeamGold === 0 && redTeamGold === 0) ? ['div.gold'] :
                     ['div.gold',
                         ['span.gold-score', blueTeamGoldString],
                         ['svg', {class: 'icon gold-icon'}, '<use xlink:href="#coins"> vs. </use>'],

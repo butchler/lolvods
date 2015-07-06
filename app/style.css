@@ -23,7 +23,7 @@ footer a {
 
 main {
     margin: 0 auto;
-    max-width: 1000px;
+    max-width: 850px;
 }
 
 /* Games */
@@ -45,7 +45,7 @@ a.vod {
     color: inherit;
 }
 
-.teams, .kills, .gold, .game-length, .game-number {
+.teams, .kills, .gold, .game-length {
     display: inline-block;
     width: 100px;
     padding: 1em;
@@ -57,6 +57,12 @@ a.vod {
 }
 .vs {
     font-size: 75%;
+}
+.game-number {
+    margin-top: 1em;
+    font-weight: bold;
+    font-size: 85%;
+    color: #aaa;
 }
 .kill-score, .gold-score {
     display: block;
