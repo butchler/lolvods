@@ -1,0 +1,20 @@
+Information that we need to extract:
+
+http://www.lolesports.com/en_US/na-lcs/na_2016_spring/schedule/regular_season/1
+    http://api.lolesports.com/api/v1/leagues
+        [league-index].slug
+    http://api.lolesports.com/api/v1/leagues?slug=na-lcs
+        highlanderTournaments[tournament-index].id
+        highlanderTournaments[tournament-index].brackets[bracket-id].matches.id
+        highlanderTournaments[tournament-index].brackets[bracket-id].matches[match-id].games[game-id].{gameId,gameRealm}
+    http://api.lolesports.com/api/v2/highlanderMatchDetails?tournamentId=739fc707-a686-4e49-9209-e16a80fd1655&matchId=f1860197-3986-4a09-8e73-d30035c3638f
+        gameIdMappings[game-index].{gameHash,id}
+        videos[video-index].{game,source}
+        teams[team-index].{name,logoUrl,altLogoUrl?}
+
+http://matchhistory.na.leagueoflegends.com/en/#match-details/TRLH1/1001520070?gameHash=e5a089b1818d40b0&tab=overview
+    https://acs.leagueoflegends.com/v1/stats/game/TRLH1/1001520070?gameHash=e5a089b1818d40b0
+        {gameCreation,gameDuration}
+        participants[participant-index].championId
+        participants[participant-index].stats.{kills,deaths,assists,goldEarned}
+

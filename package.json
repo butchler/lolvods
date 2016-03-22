@@ -1,11 +1,18 @@
 {
   "name": "lolvods",
-  "version": "0.0.1",
+  "version": "2.0.0",
   "description": "Semi-spoiler free League of Legends VODs",
-  "main": "update-divshot.js",
+  "main": "generate-game-list.js",
+  "scripts": {
+    "build": "./node_modules/typescript/bin/tsc"
+  },
   "author": "Adam Buechler",
   "license": "ISC",
   "dependencies": {
-    "divshot-push": "^1.4.2"
+    "is-my-json-valid": "^2.13.1"
+  },
+  "devDependencies": {
+    "lodash": "^4.6.1",
+    "typescript": "^1.8.9"
   }
 }
