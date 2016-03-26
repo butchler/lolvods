@@ -1,4 +1,4 @@
-import { forEach } from 'lodash';
+import { forEach } from './util';
 import { validateLeague, validateTournament, validateBracket, validateMatch,
     validateGame, validateMatchDetails, validateGameStats } from './validators';
 import { MatchInfo, GameInfo, TeamInfo, GameStats, TeamStats, Dict } from './interfaces';
@@ -133,7 +133,7 @@ export function parseGameStats(gameStats: any): GameStats | void {
         return null;
     }
 
-    forEach(gameStats.participants, (participant) => {
+    forEach(gameStats.participants, (participant: any) => {
         const teamId = participant.teamId;
 
         if (!teams.has(teamId)) {
