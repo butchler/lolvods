@@ -7,11 +7,5 @@
     },
     "exclude": [
         "node_modules"
-    ],
-    "files": [
-        "generate-game-list.ts",
-        "typings/node.d.ts",
-        "typings/lodash.d.ts",
-        "typings/is-my-json-valid.d.ts"
     ]
 }

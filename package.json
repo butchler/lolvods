@@ -4,7 +4,8 @@
   "description": "Semi-spoiler free League of Legends VODs",
   "main": "generate-game-list.js",
   "scripts": {
-    "build": "./node_modules/typescript/bin/tsc"
+    "build": "./node_modules/typescript/bin/tsc --pretty",
+    "watch": "./node_modules/typescript/bin/tsc --pretty --watch"
   },
   "author": "Adam Buechler",
   "license": "ISC",
