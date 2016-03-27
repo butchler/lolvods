@@ -1,4 +1,4 @@
-import { forEach } from './util';
+import { values } from './util';
 import { validateLeague, validateTournament, validateBracket, validateMatch,
     validateGame, validateMatchDetails, validateGameStats } from './validators';
 import { MatchInfo, GameInfo, TeamInfo, GameStats, TeamStats, Dict } from './interfaces';
@@ -9,7 +9,9 @@ import { MatchInfo, GameInfo, TeamInfo, GameStats, TeamStats, Dict } from './int
 //
 // API request, and returns a map of the match UUIDs to MatchInfo for each
 // match so far in the league.
-export function parseMatchesFromLeague(leagueInfo: any): Dict<MatchInfo> {
+export function parseMatchesFromLeague(leagueInfoJson: string): Dict<MatchInfo> {
+    const leagueInfo = JSON.parse(leagueInfoJson);
+
     const matches = {} as Dict<MatchInfo>;
 
     if (validateLeague(leagueInfo) !== true) {
@@ -17,19 +19,19 @@ export function parseMatchesFromLeague(leagueInfo: any): Dict<MatchInfo> {
         return matches;
     }
 
-    forEach(leagueInfo.highlanderTournaments, (tournament) => {
+    for (let tournament of values(leagueInfo.highlanderTournaments)) {
         if (validateTournament(tournament) !== true) {
             console.error('Dropping invalid tournament:', validateTournament.errors);
             return;
         }
 
-        forEach(tournament.brackets, (bracket) => {
+        for (let bracket of values(tournament.brackets)) {
             if (validateBracket(bracket) !== true) {
                 console.error('Dropping invalid bracket:', validateBracket.errors);
                 return;
             }
 
-            forEach(bracket.matches, (match) => {
+            for (let match of values(bracket.matches)) {
                 if (validateMatch(match) !== true) {
                     console.error('Dropping invalid match:', validateMatch.errors);
                     return;
@@ -46,7 +48,7 @@ export function parseMatchesFromLeague(leagueInfo: any): Dict<MatchInfo> {
 
                 const games = {} as Dict<GameInfo>;
 
-                forEach(match.games, (game) => {
+                for (let game of values(match.games)) {
                     if (validateGame(game) !== true) {
                         console.error('Dropping invalid game:', validateGame.errors);
                         return;
@@ -57,7 +59,7 @@ export function parseMatchesFromLeague(leagueInfo: any): Dict<MatchInfo> {
                         gameId: game.gameId,
                         gameRealm: game.gameRealm
                     };
-                });
+                }
 
                 matches[match.id] = {
                     id: match.id,
@@ -65,9 +67,9 @@ export function parseMatchesFromLeague(leagueInfo: any): Dict<MatchInfo> {
                     timestamp: match.standings.timestamp,
                     games
                 };
-            });
-        });
-    });
+            }
+        }
+    }
 
     return matches;
 }
@@ -78,7 +80,9 @@ export function parseMatchesFromLeague(leagueInfo: any): Dict<MatchInfo> {
 //
 // API request and returns a map of game UUIDs to GameInfos for each game in
 // the match.
-export function parseGamesFromMatchDetails(matchDetails: any): Dict<GameInfo> {
+export function parseGamesFromMatchDetails(matchDetailsJson: string): Dict<GameInfo> {
+    const matchDetails = JSON.parse(matchDetailsJson);
+
     const games = {} as Dict<GameInfo>;
 
     if (validateMatchDetails(matchDetails) !== true) {
@@ -88,26 +92,26 @@ export function parseGamesFromMatchDetails(matchDetails: any): Dict<GameInfo> {
 
     // Extract team info, which will be the same for each game.
     const teams = new Array<TeamInfo>();
-    forEach(matchDetails.teams, (team) => {
+    for (let team of values(matchDetails.teams)) {
         teams.push({
             acronym: team.acronym,
             name: team.name,
             logoUrl: team.logoUrl
         });
-    });
+    }
 
     // Extract gameHash.
-    forEach(matchDetails.gameIdMappings, (game) => {
+    for (let game of values(matchDetails.gameIdMappings)) {
         games[game.id] = {
             gameHash: game.gameHash,
             // Videos map locale to video URL.
             videos: {} as Dict<string>,
             teams
         };
-    });
+    }
 
     // Extract video URLs.
-    forEach(matchDetails.videos, (video) => {
+    for (let video of values(matchDetails.videos)) {
         const game = games[video.game];
 
         if (game) {
@@ -115,7 +119,7 @@ export function parseGamesFromMatchDetails(matchDetails: any): Dict<GameInfo> {
         } else {
             console.error('Found video for non-existent game:', video);
         }
-    });
+    }
 
     return games;
 }
@@ -125,7 +129,9 @@ export function parseGamesFromMatchDetails(matchDetails: any): Dict<GameInfo> {
 // https://acs.leagueoflegends.com/v1/stats/game/${gameRealm}/${gameId}?gameHash=${gameHash}
 //
 // and returns the stats such as duration, kills, and gold for that game.
-export function parseGameStats(gameStats: any): GameStats | void {
+export function parseGameStats(gameStatsJson: string): GameStats | void {
+    const gameStats = JSON.parse(gameStatsJson);
+
     const teams = new Map<number, TeamStats>();
 
     if (validateGameStats(gameStats) !== true) {
@@ -133,7 +139,7 @@ export function parseGameStats(gameStats: any): GameStats | void {
         return null;
     }
 
-    forEach(gameStats.participants, (participant: any) => {
+    for (let participant of values(gameStats.participants)) {
         const teamId = participant.teamId;
 
         if (!teams.has(teamId)) {
@@ -150,7 +156,7 @@ export function parseGameStats(gameStats: any): GameStats | void {
         team.deaths += participant.stats.deaths;
         team.assists += participant.stats.assists;
         team.gold += participant.stats.goldEarned;
-    });
+    }
 
     const teamList = new Array<TeamStats>();
     teams.forEach((team) => teamList.push(team));

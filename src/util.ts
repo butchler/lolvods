@@ -1,41 +1,88 @@
 import * as http from 'http';
+import * as https from 'https';
 import { Dict } from './interfaces';
 
-export function forEach(object: Array<any>, callback: (value: any, index: number) => void): void;
-export function forEach(object: Dict<any>, callback: (value: any, key?: string) => void): void;
-export function forEach(object: Array<any> | Dict<any>, callback: (value: any, key?: string | number) => void): void {
-    if (Array.isArray(object)) {
-        const length = object.length;
-
-        for (let i = 0; i < length; i++) {
-            callback(object[i], i);
+// Generator function that iterates over all of the own properties of
+// the given object.
+//
+// Can be used with a for..of loop like so:
+//
+// for (let entry of util.entries(object)) {
+//     const value = entry[0], key = entry[1];
+//     // Do something with key/value.
+// }
+//
+// However, if you pass it an iterable object, like an Array, it will just
+// iterate over the iterable, allowing you to iterate over arrays and objects
+// in the same way. Think of it as underscore/lodash's forEach function, but
+// using for..of instead of a callback function.
+export function entries(object: Dict<any>): IterableIterator<[any, string]>;
+export function entries(object: Iterable<any>): IterableIterator<[any, number]>;
+export function *entries(object: Dict<any> | Iterable<any>): IterableIterator<[any, string | number]> {
+    if (isIterable(object)) {
+        // If it is iterable, just iterate over it using a for..of loop.
+        let index = 0;
+        for (let value of object as Iterable<any>) {
+            yield [value, index];
+            index += 1;
         }
     } else {
-        for (const property in object) {
-            if (object.hasOwnProperty(property)) {
-                callback(object[property], property);
+        // If it is a dictionary, iterate over all of its own properties.
+        const dict = object as Dict<any>;
+        for (const property in dict) {
+            if (dict.hasOwnProperty(property)) {
+                yield [dict[property], property];
             }
         }
     }
 }
 
-export function filterObject<V>(object: Dict<V>, filterCondition: (value: V, key: string) => boolean): Dict<V> {
-    const filteredObject = {} as Dict<V>;
+export function isIterable(object: any | Iterable<any>): boolean {
+    return object !== null && object !== undefined && typeof object[Symbol.iterator] === 'function';
+}
 
-    forEach(object, (value, key) => {
+// Same as entries, but just returns the value instead of a [value, key] pair:
+//
+// for (let value of util.values(object)) {
+//     // Do something with value.
+// }
+export function *values(object: Dict<any> | Iterable<any>): IterableIterator<any> {
+    for (let entry of entries(object)) {
+        yield entry[0];
+    }
+}
+
+export function filterObject(object: Dict<any>, filterCondition: (value: any, key: string) => boolean): Dict<any> {
+    const filteredObject: Dict<any> = {};
+
+    for (let entry of entries(object)) {
+        const value = entry[0], key = entry[1];
         if (filterCondition(value, key)) {
             filteredObject[key] = value;
         }
-    });
+    }
 
     return filteredObject;
+}
+
+export function mapObject(object: Dict<any>, mapFunction: (value: any, key: string | void) => any): Dict<any> {
+    const mappedObject: Dict<any> = {};
+
+    for (let entry of entries(object)) {
+        const value = entry[0], key = entry[1];
+        mappedObject[key] = mapFunction(value, key);
+    }
+
+    return mappedObject;
 }
 
 export function fetchUrl(url: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
         console.log(`Fetching URL "${url}"...`);
 
-        http.get(url, (response) => {
+        const protocol = url.startsWith('https:') ? https : http;
+
+        protocol.get(url, (response) => {
             if (response.statusCode !== 200) {
                 reject(new Error(`HTTP response returned status code ${response.statusCode} instead of 200 for URL "${url}".`));
                 return;

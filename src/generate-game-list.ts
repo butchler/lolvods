@@ -1,153 +1,134 @@
 import * as fs from 'fs';
 import * as util from './util';
 import { parseMatchesFromLeague, parseGamesFromMatchDetails, parseGameStats } from './parsers';
-import { GameInfo, MatchInfo, Dict } from './interfaces';
+import { GameInfo, GameStats, MatchInfo, Dict } from './interfaces';
 
-function defer(deferredFunction: () => void): Promise<void> {
-    return new Promise<void>((resolve, reject) => {
-        setTimeout(() => {
-            deferredFunction();
-            resolve();
-        }, 0);
+const CACHED_MATCHES_FILE = './cached-matches.json',
+    GAME_LIST_FILE = './games.json',
+    // Get all of the games in the last NUM_DAYS days.
+    NUM_DAYS = 7,
+    // Only collect games for the given leagues.
+    LEAGUES = ['na-lcs', 'eu-lcs'];
+
+main();
+
+async function main() {
+    // Handle any uncaught Promise rejections (in case we forget to add a
+    // .catch(...) callback).
+    process.on('unhandledRejection', (error: any) => {
+        console.error('Unhandled rejection from promise.');
+        throw error;
     });
+
+    const matches = await fetchMatchesForLeagues(LEAGUES);
+
+    // Get list of all games from the updated list of matches.
+    const matchList = [...util.values(matches)];
+    const allGames = Object.assign({}, ...matchList.map((match) => match.games));
+    const gameList: Array<GameInfo> = [...util.values(allGames)];
+
+    // Sort the games by most recent start time first.
+    gameList.sort((game1, game2) => game2.stats.startTime.valueOf() - game1.stats.startTime.valueOf());
+
+    // Write the list of games to a file.
+    try {
+        fs.writeFileSync(GAME_LIST_FILE, JSON.stringify(gameList));
+    } catch (error) {
+        console.error('Error writing game list file:', error);
+    }
 }
 
-async function fetchGameInfo(matches: Dict<MatchInfo>) {
-    const promises = new Array<Promise<void>>();
+async function fetchMatchesForLeagues(leagueSlugs: Array<string>): Promise<Dict<MatchInfo>> {
+    // Load cached match information.
+    let cachedMatches: Dict<MatchInfo> = {};
+    try {
+        cachedMatches = JSON.parse(fs.readFileSync(CACHED_MATCHES_FILE, 'utf8')) as Dict<MatchInfo>;
+    } catch (error) {
+        console.error('Error reading cached matches file:', error);
+    }
 
-    for (const id in matches) {
-        const match = matches[id];
+    // Fetch matche info for all leagues.
+    const allMatches: Dict<MatchInfo> = {};
+    for (let leagueSlug of leagueSlugs) {
+        const leagueInfoUrl = `http://api.lolesports.com/api/v1/leagues?slug=${leagueSlug}`;
+        const leagueInfoJson = await util.fetchUrl(leagueInfoUrl);
+
+        const matches = parseMatchesFromLeague(leagueInfoJson);
+
+        Object.assign(allMatches, matches);
+    }
+
+    // Filter to most recent matches.
+    const startTimestamp = Date.now() - 1000 * 60 * 60 * 24 * NUM_DAYS;
+    const recentMatches = util.filterObject(allMatches, (match) => match.timestamp > startTimestamp);
+    const recentCachedMatches = util.filterObject(cachedMatches, (match) => match.timestamp > startTimestamp);
+
+    // Find all of the matches in the league that are not in the cache.
+    const uncachedMatches = util.filterObject(recentMatches, (_, matchId) => !recentCachedMatches.hasOwnProperty(matchId));
+
+    // Get all of the game information and stats for each of the uncached matches.
+    await fetchAndUpdateGameInfo(uncachedMatches);
+    const updatedMatches = Object.assign({}, recentCachedMatches, uncachedMatches);
+
+    // Write the updated matche info to the cache.
+    try {
+        fs.writeFileSync(CACHED_MATCHES_FILE, JSON.stringify(updatedMatches));
+    } catch (error) {
+        console.error('Error writing cached matches file:', error);
+    }
+
+    return updatedMatches;
+}
+
+async function fetchAndUpdateGameInfo(matches: Dict<MatchInfo>) {
+    for (let match of util.values(matches)) {
         const matchDetailsUrl = `http://api.lolesports.com/api/v2/highlanderMatchDetails?tournamentId=${match.tournamentId}&matchId=${match.id}`;
         const matchDetailsJson = await util.fetchUrl(matchDetailsUrl);
 
-        // Defer the updating of the match info so that we can start fetching
-        // the next match details while we are updating the current one.
-        promises.push(defer(() => updateGameInfo(match, matchDetailsJson)));
+        updateWithMatchDetails(match, matchDetailsJson);
 
-        // TODO: Fetch game stats.
-    }
+        // Fetch game stats for each game in the match.
+        for (let game of util.values(match.games)) {
+            // The game stats URL only works with HTTPS.
+            const gameStatsUrl = `https://acs.leagueoflegends.com/v1/stats/game/${game.gameRealm}/${game.gameId}?gameHash=${game.gameHash}`;
+            const gameStatsJson = await util.fetchUrl(gameStatsUrl);
 
-    await Promise.all(promises);
-}
-
-// Alternative version that makes up to 2 concurrent HTTP requests at a time.
-/*async function fetchGameInfo(matches: Dict<MatchInfo>) {
-    const bottleneck = createBottleneck(2);
-
-    for (const id in matches) {
-        const match = matches[id];
-        const matchDetailsUrl = `http://api.lolesports.com/api/v2/highlanderMatchDetails?tournamentId=${match.tournamentId}&matchId=${match.id}`;
-
-        await bottleneck.add(async function () {
-            const matchDetailsJson = await util.fetchUrl(matchDetailsUrl);
-            updateGameInfo(match, matchDetailsJson);
-        });
-    }
-
-    await bottleneck.allDone();
-}
-
-interface Bottleneck {
-    add: (asyncFunction: () => Promise<any>) => Promise<void>;
-    allDone: () => Promise<any>;
-}
-function createBottleneck(maxConcurrent: number, onError?: (error: Error) => void): Bottleneck {
-    const promises = new Array<Promise<any>>();
-
-    async function add(asyncFunction: () => Promise<any>): Promise<void> {
-        while (promises.length >= maxConcurrent) {
-            const promiseIndex = await Promise.race(promises.map((promise, index) => {
-                return new Promise<number>((resolve, reject) => {
-                    promise.then(() => {
-                        resolve(index);
-                    }).catch((error) => {
-                        if (onError) {
-                            onError(error);
-                        } else {
-                            throw error;
-                        }
-                    });
-                });
-            }));
-
-            // Remove the first promise that finishes.
-            promises.splice(promiseIndex, 1);
+            updateWithGameStats(match, game, gameStatsJson);
         }
-
-        const promise = asyncFunction();
-        promises.push(promise);
     }
+}
 
-    function allDone(): Promise<any> {
-        return Promise.all(promises);
-    }
+function updateWithMatchDetails(match: MatchInfo, matchDetailsJson: string): void {
+    const games = parseGamesFromMatchDetails(matchDetailsJson);
 
-    return {
-        add,
-        allDone
-    };
-}*/
-
-function updateGameInfo(match: MatchInfo, matchDetailsJson: string): void {
-    const games = parseGamesFromMatchDetails(JSON.parse(matchDetailsJson));
-
-    for (const id in match.games) {
-        const game = match.games[id];
-
-        if (games[id] === undefined) {
+    for (let game of util.values(match.games)) {
+        if (games[game.id] === undefined) {
             console.error('Dropping game missing from match details:', game);
-            delete match.games[id];
+            delete match.games[game.id];
             continue;
         }
 
-        const extraGameInfo = games[id];
+        const extraGameInfo = games[game.id];
         game.gameHash = extraGameInfo.gameHash;
         game.teams = extraGameInfo.teams;
         game.videos = extraGameInfo.videos;
     }
 }
 
-// Load cached match information.
-const CACHED_MATCHES_FILE = './cached-matches.json';
-let cachedMatches: Dict<MatchInfo> = {};
-try {
-    cachedMatches = JSON.parse(fs.readFileSync(CACHED_MATCHES_FILE, 'utf8')) as Dict<MatchInfo>;
-} catch (error) {
-    console.error('Error reading cached matches file:', error);
-}
+function updateWithGameStats(match: MatchInfo, game: GameInfo, gameStatsJson: string): void {
+    const gameStats = parseGameStats(gameStatsJson);
 
-// Get all of the matches for the given league.
-const leagueInfo = JSON.parse(fs.readFileSync('./na-lcs.json', { encoding: 'utf-8' }));
-const matches = parseMatchesFromLeague(leagueInfo);
-
-// Filter out all but the most recent matches.
-//const twoWeeksAgo = Date.now() - 1000 * 60 * 60 * 24 * 7 * 2;
-const twoWeeksAgo = Date.now() - 1000 * 60 * 60 * 24 * 7 * 1;
-const recentMatches = util.filterObject(matches, (match) => match.timestamp > twoWeeksAgo);
-
-// Find all of the matches in the league that are not in the cache.
-let uncachedMatches = util.filterObject(recentMatches, (_, matchId) => !cachedMatches.hasOwnProperty(matchId));
-
-// Get all of the game information and stats for each of the matches.
-fetchGameInfo(uncachedMatches).then(() => {
-    console.log('uncachedMatches', uncachedMatches);
-
-    // Write all of the recent matches to the cache.
-    const allMatches = Object.assign({}, cachedMatches, uncachedMatches);
-    const newCachedMatches = util.filterObject(allMatches, (match) => match.timestamp > twoWeeksAgo);
-
-    console.log('newCachedMatches', newCachedMatches);
-
-    try {
-        fs.writeFileSync(CACHED_MATCHES_FILE, JSON.stringify(newCachedMatches));
-    } catch (error) {
-        console.error('Error writing cached matches file:', error);
+    if (!gameStats) {
+        // Remove the game if we can't get its stats.
+        delete match.games[game.id];
+    } else {
+        game.stats = gameStats as GameStats;
     }
-});
 
-// Handle any uncaught Promise rejections (in case we forget to add a
-// .catch(...) callback).
-process.on('unhandledRejection', (error: any) => {
-    console.error('Unhandled rejection from promise.');
-    throw error;
-});
+    // Randomly swap the order of the teams, so that you can't tell
+    // which team is associated with which stats.
+    if (Math.random() < 0.5) {
+        let team1 = game.stats.teamStats[0], team2 = game.stats.teamStats[1];
+        game.stats.teamStats = [team2, team1];
+    }
+}
