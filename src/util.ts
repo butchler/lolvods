@@ -65,17 +65,6 @@ export function filterObject(object: Dict<any>, filterCondition: (value: any, ke
     return filteredObject;
 }
 
-export function mapObject(object: Dict<any>, mapFunction: (value: any, key: string | void) => any): Dict<any> {
-    const mappedObject: Dict<any> = {};
-
-    for (let entry of entries(object)) {
-        const value = entry[0], key = entry[1];
-        mappedObject[key] = mapFunction(value, key);
-    }
-
-    return mappedObject;
-}
-
 export function fetchUrl(url: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
         console.log(`Fetching URL "${url}"...`);
