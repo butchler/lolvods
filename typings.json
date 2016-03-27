@@ -1,0 +1,8 @@
+{
+  "ambientDependencies": {
+    "is-my-json-valid": "registry:dt/is-my-json-valid#0.0.0+20160316135805",
+    "node": "registry:dt/node#4.0.0+20160319033040",
+    "react": "registry:dt/react#0.14.0+20160319053454",
+    "react-dom": "registry:dt/react-dom#0.14.0+20160316155526"
+  }
+}

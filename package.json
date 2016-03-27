@@ -10,7 +10,9 @@
   "author": "Adam Buechler",
   "license": "ISC",
   "dependencies": {
-    "is-my-json-valid": "^2.13.1"
+    "is-my-json-valid": "^2.13.1",
+    "react": "^0.14.7",
+    "react-dom": "^0.14.7"
   },
   "devDependencies": {
     "typescript": "^1.8.9"

@@ -1,3 +1,4 @@
 /node_modules
 /app/index.html
 /src/**/*.js
+/typings
