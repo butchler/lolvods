@@ -86,7 +86,7 @@ async function main(): Promise<string> {
 
         <script>
             // Include the game data so that bundle.js can reference it.
-            var ${constants.APP_STATE_VARIBABLE} = ${JSON.stringify(appState)};
+            window['${constants.APP_STATE_VARIABLE}'] = ${JSON.stringify(appState)};
         </script>
     </body>
 </html>`;

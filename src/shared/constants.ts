@@ -2,7 +2,7 @@ export const
     // The global variable that will be inserted into the HTML so that the
     // client-side code can access to mount the React components with the same
     // initial state as the server-rendered HTML.
-    APP_STATE_VARIBABLE = 'GAMES',
+    APP_STATE_VARIABLE = 'APP_STATE',
     // Where to store the cached matches.
     CACHED_MATCHES_FILE = __dirname + '/../../public/cached-matches.json',
     // Location of the CSS to be inlined into the HTML.

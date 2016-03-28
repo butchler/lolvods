@@ -21,19 +21,19 @@ export function matchesFromLeague(leagueInfoJson: string): Dict<MatchInfo> {
     for (let tournament of values(leagueInfo.highlanderTournaments)) {
         if (validate.tournament(tournament) !== true) {
             error(`Dropping invalid tournament: ${JSON.stringify(validate.tournament.errors)}`);
-            return;
+            break;
         }
 
         for (let bracket of values(tournament.brackets)) {
             if (validate.bracket(bracket) !== true) {
                 error(`Dropping invalid bracket: ${JSON.stringify(validate.bracket.errors)}`);
-                return;
+                break;
             }
 
             for (let match of values(bracket.matches)) {
                 if (validate.match(match) !== true) {
                     error(`Dropping invalid match: ${JSON.stringify(validate.match.errors)}`);
-                    return;
+                    break;
                 }
 
                 if (match.state !== 'resolved') {
@@ -42,7 +42,7 @@ export function matchesFromLeague(leagueInfoJson: string): Dict<MatchInfo> {
                     // a best of 5, etc., so it would be better to not have to
                     // wait until all 5 matches are done.
                     log(`Dropping unfinished match: ${JSON.stringify(match)}`);
-                    return;
+                    break;
                 }
 
                 const games = {} as Dict<GameInfo>;
@@ -50,7 +50,7 @@ export function matchesFromLeague(leagueInfoJson: string): Dict<MatchInfo> {
                 for (let game of values(match.games)) {
                     if (validate.game(game) !== true) {
                         error(`Dropping invalid game: ${JSON.stringify(validate.game.errors)}`);
-                        return;
+                        break;
                     }
 
                     games[game.id] = {

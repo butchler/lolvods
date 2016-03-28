@@ -5,14 +5,14 @@ import { GameInfo, GameStats, MatchInfo, Dict } from '../shared/interfaces';
 import * as constants from '../shared/constants';
 
 export default async function generateGameList(): Promise<Array<GameInfo>> {
-    const matches = await fetchMatchesForLeagues(constants.LEAGUES);
-
-    util.log('Combining games from all matches.');
+    const allMatches = await fetchMatchesForLeagues(constants.LEAGUES);
 
     // Get list of all games from the updated list of matches.
-    const matchList = [...util.values(matches)];
+    const matchList = [...util.values(allMatches)];
     const allGames = Object.assign({}, ...matchList.map((match) => match.games));
     const gameList: Array<GameInfo> = [...util.values(allGames)];
+
+    util.log(`Collected ${gameList.length} games from ${matchList.length} matches.`);
 
     // Sort the games by most recent start time first.
     gameList.sort((game1, game2) => game2.stats.startTime.valueOf() - game1.stats.startTime.valueOf());
@@ -43,7 +43,7 @@ async function fetchMatchesForLeagues(leagueSlugs: Array<string>): Promise<Dict<
         Object.assign(allMatches, matches);
     }
 
-    util.log('Filtering matches by timestamp.');
+    util.log(`Filtering ${Object.keys(allMatches).length} matches by timestamp.`);
 
     // Filter to most recent matches.
     const startTimestamp = Date.now() - 1000 * 60 * 60 * 24 * constants.NUM_DAYS;

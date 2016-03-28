@@ -102,6 +102,6 @@ export function log(message: string) {
 export var numErrors = 0;
 export function error(message: string) {
     numErrors += 1;
-    LOG.push(`(Error) ${message}\n`);
+    LOG.push(`(Error) ${message}`);
     process.stderr.write(message + "\n");
 }
