@@ -1,0 +1,13 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "target": "es5",
+        "jsx": "react",
+        "noImplicitAny": true,
+        "sourceMap": false
+    },
+    "exclude": [
+        "typings/browser.d.ts",
+        "typings/browser"
+    ]
+}

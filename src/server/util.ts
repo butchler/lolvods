@@ -1,6 +1,6 @@
 import * as http from 'http';
 import * as https from 'https';
-import { Dict } from './interfaces';
+import { Dict } from '../shared/interfaces';
 
 // Generator function that iterates over all of the own properties of
 // the given object.

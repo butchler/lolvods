@@ -1,4 +1,5 @@
 /node_modules
-/app/index.html
+/public/index.html
+/public/bundle.js
 /src/**/*.js
 /typings

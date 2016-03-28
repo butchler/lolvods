@@ -1,7 +1,9 @@
+// Generic interfaces
 export interface Dict<T> {
     [index: string]: T;
 }
 
+// Model interfaces
 export interface MatchInfo {
     id: string,
     tournamentId: string;
@@ -44,4 +46,26 @@ export interface TeamStats {
     deaths: number;
     assists: number;
     gold: number;
+}
+
+// View interfaces
+export interface AppProps {
+    games: Array<GameInfo>;
+}
+
+export interface AppState {
+    options: Options;
+}
+
+export interface Options {
+    // TODO
+}
+
+export interface OptionsProps {
+    onChange: (options: Options) => void;
+}
+
+export interface GameListProps {
+    games: Array<GameInfo>;
+    options: Options;
 }

@@ -1,7 +1,6 @@
 import { values } from './util';
-import { validateLeague, validateTournament, validateBracket, validateMatch,
-    validateGame, validateMatchDetails, validateGameStats } from './validators';
-import { MatchInfo, GameInfo, TeamInfo, GameStats, TeamStats, Dict } from './interfaces';
+import { MatchInfo, GameInfo, TeamInfo, GameStats, TeamStats, Dict } from '../shared/interfaces';
+import * as validate from './validators';
 
 // Takes the JSON map for a
 //
@@ -9,31 +8,31 @@ import { MatchInfo, GameInfo, TeamInfo, GameStats, TeamStats, Dict } from './int
 //
 // API request, and returns a map of the match UUIDs to MatchInfo for each
 // match so far in the league.
-export function parseMatchesFromLeague(leagueInfoJson: string): Dict<MatchInfo> {
+export function matchesFromLeague(leagueInfoJson: string): Dict<MatchInfo> {
     const leagueInfo = JSON.parse(leagueInfoJson);
 
     const matches = {} as Dict<MatchInfo>;
 
-    if (validateLeague(leagueInfo) !== true) {
-        console.error('Dropping invalid league:', validateLeague.errors);
+    if (validate.league(leagueInfo) !== true) {
+        console.error('Dropping invalid league:', validate.league.errors);
         return matches;
     }
 
     for (let tournament of values(leagueInfo.highlanderTournaments)) {
-        if (validateTournament(tournament) !== true) {
-            console.error('Dropping invalid tournament:', validateTournament.errors);
+        if (validate.tournament(tournament) !== true) {
+            console.error('Dropping invalid tournament:', validate.tournament.errors);
             return;
         }
 
         for (let bracket of values(tournament.brackets)) {
-            if (validateBracket(bracket) !== true) {
-                console.error('Dropping invalid bracket:', validateBracket.errors);
+            if (validate.bracket(bracket) !== true) {
+                console.error('Dropping invalid bracket:', validate.bracket.errors);
                 return;
             }
 
             for (let match of values(bracket.matches)) {
-                if (validateMatch(match) !== true) {
-                    console.error('Dropping invalid match:', validateMatch.errors);
+                if (validate.match(match) !== true) {
+                    console.error('Dropping invalid match:', validate.match.errors);
                     return;
                 }
 
@@ -49,8 +48,8 @@ export function parseMatchesFromLeague(leagueInfoJson: string): Dict<MatchInfo> 
                 const games = {} as Dict<GameInfo>;
 
                 for (let game of values(match.games)) {
-                    if (validateGame(game) !== true) {
-                        console.error('Dropping invalid game:', validateGame.errors);
+                    if (validate.game(game) !== true) {
+                        console.error('Dropping invalid game:', validate.game.errors);
                         return;
                     }
 
@@ -80,13 +79,13 @@ export function parseMatchesFromLeague(leagueInfoJson: string): Dict<MatchInfo> 
 //
 // API request and returns a map of game UUIDs to GameInfos for each game in
 // the match.
-export function parseGamesFromMatchDetails(matchDetailsJson: string): Dict<GameInfo> {
+export function gamesFromMatchDetails(matchDetailsJson: string): Dict<GameInfo> {
     const matchDetails = JSON.parse(matchDetailsJson);
 
     const games = {} as Dict<GameInfo>;
 
-    if (validateMatchDetails(matchDetails) !== true) {
-        console.error('Dropping invalid match:', validateMatchDetails.errors);
+    if (validate.matchDetails(matchDetails) !== true) {
+        console.error('Dropping invalid match:', validate.matchDetails.errors);
         return games;
     }
 
@@ -129,13 +128,13 @@ export function parseGamesFromMatchDetails(matchDetailsJson: string): Dict<GameI
 // https://acs.leagueoflegends.com/v1/stats/game/${gameRealm}/${gameId}?gameHash=${gameHash}
 //
 // and returns the stats such as duration, kills, and gold for that game.
-export function parseGameStats(gameStatsJson: string): GameStats | void {
+export function gameStats(gameStatsJson: string): GameStats | void {
     const gameStats = JSON.parse(gameStatsJson);
 
     const teams = new Map<number, TeamStats>();
 
-    if (validateGameStats(gameStats) !== true) {
-        console.error('Dropping invalid game stats:', validateGameStats.errors);
+    if (validate.gameStats(gameStats) !== true) {
+        console.error('Dropping invalid game stats:', validate.gameStats.errors);
         return null;
     }
 

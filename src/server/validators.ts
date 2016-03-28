@@ -6,7 +6,7 @@ import validator = require('is-my-json-valid');
 // 8-4-4-4-12 format (.e.g e4e64922-2172-4099-b5b7-80dca6b47159).
 const uuid_pattern = "^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$";
 
-export const validateGame = validator({
+export const game = validator({
     type: 'object',
     required: ['gameId', 'gameRealm'],
     additionalProperties: true,
@@ -25,7 +25,7 @@ export const validateGame = validator({
         }
     }
 });
-export const validateMatch = validator({
+export const match = validator({
     type: 'object',
     required: ['id', 'games', 'standings', 'state'],
     additionalProperties: true,
@@ -56,7 +56,7 @@ export const validateMatch = validator({
         }
     }
 });
-export const validateBracket = validator({
+export const bracket = validator({
     type: 'object',
     required: ['matches'],
     additionalProperties: true,
@@ -73,7 +73,7 @@ export const validateBracket = validator({
         }
     }
 });
-export const validateTournament = validator({
+export const tournament = validator({
     type: 'object',
     required: ['id', 'brackets'],
     additionalProperties: true,
@@ -94,7 +94,7 @@ export const validateTournament = validator({
         }
     }
 });
-export const validateLeague = validator({
+export const league = validator({
     type: 'object',
     required: ['highlanderTournaments'],
     additionalProperties: true,
@@ -110,7 +110,7 @@ export const validateLeague = validator({
     },
 });
 
-export const validateMatchDetails = validator({
+export const matchDetails = validator({
     type: 'object',
     required: ['gameIdMappings', 'teams', 'videos'],
     additionalProperties: true,
@@ -177,7 +177,7 @@ export const validateMatchDetails = validator({
     }
 });
 
-export const validateGameStats = validator({
+export const gameStats = validator({
     type: 'object',
     required: ['participants', 'gameDuration', 'gameCreation'],
     additionalProperties: true,

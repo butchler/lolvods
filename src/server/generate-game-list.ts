@@ -1,18 +1,16 @@
 import * as fs from 'fs';
 import * as util from './util';
-import { parseMatchesFromLeague, parseGamesFromMatchDetails, parseGameStats } from './parsers';
-import { GameInfo, GameStats, MatchInfo, Dict } from './interfaces';
+import { GameInfo, GameStats, MatchInfo, Dict } from '../shared/interfaces';
+import * as parse from './parsers';
 
-const CACHED_MATCHES_FILE = './cached-matches.json',
-    GAME_LIST_FILE = './games.json',
+const
+    CACHED_MATCHES_FILE = __dirname + '/../../public/cached-matches.json',
     // Get all of the games in the last NUM_DAYS days.
     NUM_DAYS = 7,
     // Only collect games for the given leagues.
     LEAGUES = ['na-lcs', 'eu-lcs'];
 
-main();
-
-async function main() {
+export default async function generateGameList(): Promise<Array<GameInfo>> {
     // Handle any uncaught Promise rejections (in case we forget to add a
     // .catch(...) callback).
     process.on('unhandledRejection', (error: any) => {
@@ -30,12 +28,7 @@ async function main() {
     // Sort the games by most recent start time first.
     gameList.sort((game1, game2) => game2.stats.startTime.valueOf() - game1.stats.startTime.valueOf());
 
-    // Write the list of games to a file.
-    try {
-        fs.writeFileSync(GAME_LIST_FILE, JSON.stringify(gameList));
-    } catch (error) {
-        console.error('Error writing game list file:', error);
-    }
+    return gameList;
 }
 
 async function fetchMatchesForLeagues(leagueSlugs: Array<string>): Promise<Dict<MatchInfo>> {
@@ -53,7 +46,7 @@ async function fetchMatchesForLeagues(leagueSlugs: Array<string>): Promise<Dict<
         const leagueInfoUrl = `http://api.lolesports.com/api/v1/leagues?slug=${leagueSlug}`;
         const leagueInfoJson = await util.fetchUrl(leagueInfoUrl);
 
-        const matches = parseMatchesFromLeague(leagueInfoJson);
+        const matches = parse.matchesFromLeague(leagueInfoJson);
 
         Object.assign(allMatches, matches);
     }
@@ -99,7 +92,7 @@ async function fetchAndUpdateGameInfo(matches: Dict<MatchInfo>) {
 }
 
 function updateWithMatchDetails(match: MatchInfo, matchDetailsJson: string): void {
-    const games = parseGamesFromMatchDetails(matchDetailsJson);
+    const games = parse.gamesFromMatchDetails(matchDetailsJson);
 
     for (let game of util.values(match.games)) {
         if (games[game.id] === undefined) {
@@ -116,7 +109,7 @@ function updateWithMatchDetails(match: MatchInfo, matchDetailsJson: string): voi
 }
 
 function updateWithGameStats(match: MatchInfo, game: GameInfo, gameStatsJson: string): void {
-    const gameStats = parseGameStats(gameStatsJson);
+    const gameStats = parse.gameStats(gameStatsJson);
 
     if (!gameStats) {
         // Remove the game if we can't get its stats.
