@@ -1,24 +1,13 @@
 import * as fs from 'fs';
 import * as util from './util';
-import { GameInfo, GameStats, MatchInfo, Dict } from '../shared/interfaces';
 import * as parse from './parsers';
-
-const
-    CACHED_MATCHES_FILE = __dirname + '/../../public/cached-matches.json',
-    // Get all of the games in the last NUM_DAYS days.
-    NUM_DAYS = 7,
-    // Only collect games for the given leagues.
-    LEAGUES = ['na-lcs', 'eu-lcs'];
+import { GameInfo, GameStats, MatchInfo, Dict } from '../shared/interfaces';
+import * as constants from '../shared/constants';
 
 export default async function generateGameList(): Promise<Array<GameInfo>> {
-    // Handle any uncaught Promise rejections (in case we forget to add a
-    // .catch(...) callback).
-    process.on('unhandledRejection', (error: any) => {
-        console.error('Unhandled rejection from promise.');
-        throw error;
-    });
+    const matches = await fetchMatchesForLeagues(constants.LEAGUES);
 
-    const matches = await fetchMatchesForLeagues(LEAGUES);
+    util.log('Combining games from all matches.');
 
     // Get list of all games from the updated list of matches.
     const matchList = [...util.values(matches)];
@@ -35,12 +24,15 @@ async function fetchMatchesForLeagues(leagueSlugs: Array<string>): Promise<Dict<
     // Load cached match information.
     let cachedMatches: Dict<MatchInfo> = {};
     try {
-        cachedMatches = JSON.parse(fs.readFileSync(CACHED_MATCHES_FILE, 'utf8')) as Dict<MatchInfo>;
+        util.log('Reading match cache.');
+        cachedMatches = JSON.parse(fs.readFileSync(constants.CACHED_MATCHES_FILE, 'utf8')) as Dict<MatchInfo>;
     } catch (error) {
-        console.error('Error reading cached matches file:', error);
+        util.error(`Error reading cached matches file: ${error.message}`);
     }
 
-    // Fetch matche info for all leagues.
+    util.log(`Fetching matches for leagues ${JSON.stringify(leagueSlugs)}.`);
+
+    // Fetch match info for all leagues.
     const allMatches: Dict<MatchInfo> = {};
     for (let leagueSlug of leagueSlugs) {
         const leagueInfoUrl = `http://api.lolesports.com/api/v1/leagues?slug=${leagueSlug}`;
@@ -51,24 +43,26 @@ async function fetchMatchesForLeagues(leagueSlugs: Array<string>): Promise<Dict<
         Object.assign(allMatches, matches);
     }
 
+    util.log('Filtering matches by timestamp.');
+
     // Filter to most recent matches.
-    const startTimestamp = Date.now() - 1000 * 60 * 60 * 24 * NUM_DAYS;
+    const startTimestamp = Date.now() - 1000 * 60 * 60 * 24 * constants.NUM_DAYS;
     const recentMatches = util.filterObject(allMatches, (match) => match.timestamp > startTimestamp);
     const recentCachedMatches = util.filterObject(cachedMatches, (match) => match.timestamp > startTimestamp);
 
     // Find all of the matches in the league that are not in the cache.
     const uncachedMatches = util.filterObject(recentMatches, (_, matchId) => !recentCachedMatches.hasOwnProperty(matchId));
 
+    util.log(`Getting info for ${Object.keys(uncachedMatches).length} uncached matches.`);
+
     // Get all of the game information and stats for each of the uncached matches.
     await fetchAndUpdateGameInfo(uncachedMatches);
     const updatedMatches = Object.assign({}, recentCachedMatches, uncachedMatches);
 
+    util.log('Writing match cache.');
+
     // Write the updated matche info to the cache.
-    try {
-        fs.writeFileSync(CACHED_MATCHES_FILE, JSON.stringify(updatedMatches));
-    } catch (error) {
-        console.error('Error writing cached matches file:', error);
-    }
+    fs.writeFileSync(constants.CACHED_MATCHES_FILE, JSON.stringify(updatedMatches));
 
     return updatedMatches;
 }
@@ -96,7 +90,7 @@ function updateWithMatchDetails(match: MatchInfo, matchDetailsJson: string): voi
 
     for (let game of util.values(match.games)) {
         if (games[game.id] === undefined) {
-            console.error('Dropping game missing from match details:', game);
+            util.error(`Dropping game missing from match details: ${JSON.stringify(game)}`);
             delete match.games[game.id];
             continue;
         }

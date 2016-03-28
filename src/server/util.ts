@@ -67,7 +67,7 @@ export function filterObject(object: Dict<any>, filterCondition: (value: any, ke
 
 export function fetchUrl(url: string): Promise<string> {
     return new Promise<string>((resolve, reject) => {
-        console.log(`Fetching URL "${url}"...`);
+        log(`Fetching URL "${url}"...`);
 
         const protocol = url.startsWith('https:') ? https : http;
 
@@ -82,11 +82,26 @@ export function fetchUrl(url: string): Promise<string> {
                 data += chunk;
             });
             response.on('end', () => {
-                console.log(`Finished fetching URL "${url}"`);
+                log(`Finished fetching URL "${url}"`);
                 resolve(data);
             });
         }).on('error', (error: Error) => {
             reject(error);
         });
     });
+}
+
+// Replacement for console.log that allows us to get a list of log messages so
+// that we can send it along with an error message for debugging.
+export const LOG = new Array<string>();
+export function log(message: string) {
+    LOG.push(message);
+    process.stdout.write(message + "\n");
+}
+
+export var numErrors = 0;
+export function error(message: string) {
+    numErrors += 1;
+    LOG.push(`(Error) ${message}\n`);
+    process.stderr.write(message + "\n");
 }

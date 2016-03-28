@@ -1,4 +1,4 @@
-import { values } from './util';
+import { values, log, error } from './util';
 import { MatchInfo, GameInfo, TeamInfo, GameStats, TeamStats, Dict } from '../shared/interfaces';
 import * as validate from './validators';
 
@@ -14,25 +14,25 @@ export function matchesFromLeague(leagueInfoJson: string): Dict<MatchInfo> {
     const matches = {} as Dict<MatchInfo>;
 
     if (validate.league(leagueInfo) !== true) {
-        console.error('Dropping invalid league:', validate.league.errors);
+        error(`Dropping invalid league: ${JSON.stringify(validate.league.errors)}`);
         return matches;
     }
 
     for (let tournament of values(leagueInfo.highlanderTournaments)) {
         if (validate.tournament(tournament) !== true) {
-            console.error('Dropping invalid tournament:', validate.tournament.errors);
+            error(`Dropping invalid tournament: ${JSON.stringify(validate.tournament.errors)}`);
             return;
         }
 
         for (let bracket of values(tournament.brackets)) {
             if (validate.bracket(bracket) !== true) {
-                console.error('Dropping invalid bracket:', validate.bracket.errors);
+                error(`Dropping invalid bracket: ${JSON.stringify(validate.bracket.errors)}`);
                 return;
             }
 
             for (let match of values(bracket.matches)) {
                 if (validate.match(match) !== true) {
-                    console.error('Dropping invalid match:', validate.match.errors);
+                    error(`Dropping invalid match: ${JSON.stringify(validate.match.errors)}`);
                     return;
                 }
 
@@ -41,7 +41,7 @@ export function matchesFromLeague(leagueInfoJson: string): Dict<MatchInfo> {
                     // getting information about its games, because it could be
                     // a best of 5, etc., so it would be better to not have to
                     // wait until all 5 matches are done.
-                    console.log('Dropping unfinished match:', match);
+                    log(`Dropping unfinished match: ${JSON.stringify(match)}`);
                     return;
                 }
 
@@ -49,7 +49,7 @@ export function matchesFromLeague(leagueInfoJson: string): Dict<MatchInfo> {
 
                 for (let game of values(match.games)) {
                     if (validate.game(game) !== true) {
-                        console.error('Dropping invalid game:', validate.game.errors);
+                        error(`Dropping invalid game: ${JSON.stringify(validate.game.errors)}`);
                         return;
                     }
 
@@ -85,7 +85,7 @@ export function gamesFromMatchDetails(matchDetailsJson: string): Dict<GameInfo> 
     const games = {} as Dict<GameInfo>;
 
     if (validate.matchDetails(matchDetails) !== true) {
-        console.error('Dropping invalid match:', validate.matchDetails.errors);
+        error(`Dropping invalid match: ${JSON.stringify(validate.matchDetails.errors)}`);
         return games;
     }
 
@@ -116,7 +116,7 @@ export function gamesFromMatchDetails(matchDetailsJson: string): Dict<GameInfo> 
         if (game) {
             game.videos[video.locale] = video.source;
         } else {
-            console.error('Found video for non-existent game:', video);
+            error(`Found video for non-existent game: ${JSON.stringify(video)}`);
         }
     }
 
@@ -134,7 +134,7 @@ export function gameStats(gameStatsJson: string): GameStats | void {
     const teams = new Map<number, TeamStats>();
 
     if (validate.gameStats(gameStats) !== true) {
-        console.error('Dropping invalid game stats:', validate.gameStats.errors);
+        error(`Dropping invalid game stats: ${JSON.stringify(validate.gameStats.errors)}`);
         return null;
     }
 

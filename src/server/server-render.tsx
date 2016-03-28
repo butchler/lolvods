@@ -4,104 +4,94 @@ import * as ReactDOMServer from 'react-dom/server';
 import browserify = require('browserify');
 import { minify } from 'uglify-js';
 
+import * as util from './util';
+import * as constants from '../shared/constants';
 import { AppView } from '../shared/views';
 import generateGameList from './generate-game-list';
 
-main();
+main().then((renderedHtml) => {
+    fs.writeFileSync(constants.OUTPUT_FILE, renderedHtml);
 
-async function main() {
-    //const games = await generateGameList();
-    // TODO: Remove this.
-    try {
-        var games = JSON.parse(fs.readFileSync('data/games.json', 'utf8'));
-    } catch (error) {
-        console.error('Error reading games.json:', error);
-        return;
+    if (util.numErrors > 0) {
+        sendErrorReport(null);
+    }
+}).catch((error) => {
+    sendErrorReport(error);
+
+    throw error;
+});
+
+function sendErrorReport(error: Error | void): void {
+    const logMessages = util.LOG.join("\n");
+
+    if (error) {
+        var errorReport =
+`There was an unrecoverable error while rendering the app.
+
+Stack trace:
+
+${(error as Error).stack}
+
+Log:
+
+${logMessages}`;
+    } else {
+        var errorReport =
+`There were ${util.numErrors} recoverable errors while rendering the app.
+
+Log:
+
+${logMessages}`;
     }
 
-    // Write the game data to client/games.js, as if it were a source file in
-    // the client code so that the data can be bundled together with the JavaScript.
-    try {
-        fs.writeFileSync(__dirname + '/../client/games.js', `module.exports = ${JSON.stringify(games)};`);
-    } catch (error) {
-        console.error('Error writing game list:', error);
-        return;
-    }
+    // TODO: Send me an email when there is an error.
+    console.log("\n" + errorReport);
+}
 
-    try {
-        var bundleJs = await createBundle(__dirname + '/../client/index.js');
-    } catch (error) {
-        console.error('Error creating browser bundle:', error);
-        return;
-    }
-
-    try {
-        fs.writeFileSync(__dirname + '/../../public/bundle.js', bundleJs);
-    } catch (error) {
-        console.error('Error writing browser bundle:', error);
-        return;
-    }
+// Generates the list of games using the lolesports unofficial API with
+// generateGameList(), and then generates an index.html file that contains the
+// rendered app using that game list. It also includes the CSS inline in the
+// HTML and includes the game list as JSON data so that it can be referenced by
+// the client side code to turn the server-rendered HTML into a live React
+// application.
+async function main(): Promise<string> {
+    // For testing:
+    //var games = JSON.parse(fs.readFileSync('data/games.json', 'utf8'));
+    const games = await generateGameList();
+    const appState = { games };
 
     // TODO: Maybe disable the options until the JavaScript has been loaded?
-    const appHtml = ReactDOMServer.renderToString(<AppView games={games} />);
+    util.log('Rendering app HTML.');
+    const appHtml = ReactDOMServer.renderToString(<AppView {...appState} />);
 
-    try {
-        var css = fs.readFileSync(__dirname + '/../../public/style.css', 'utf8');
-    } catch (error) {
-        console.error('Error reading CSS:', error);
-        return;
-    }
+    util.log('Loading CSS.');
+    const css = fs.readFileSync(constants.CSS_FILE, 'utf8');
 
     const documentHtml =
-       `<!doctype html>
-        <html>
-            <head>
-                <title>Spoiler-free League of Legends VODs</title>
+`<!doctype html>
+<html>
+    <head>
+        <title>Spoiler-free League of Legends VODs</title>
 
-                <style>
-                    ${css}
-                </style>
+        <style>
+            ${css}
+        </style>
 
-                <!-- Defer the execution of the script so that it can be loaded
-                    in the background while the rest of the page loads, but to only
-                    run once the page has finished loading. -->
-                <script defer src="bundle.js"></script>
-            </head>
-            <body>
-                <div id="app-container">${appHtml}</div>
-            </body>
-        </html>`;
+        <!-- Run the script asynchronously so that it can be downloaded
+             in the background while the rest of the page loads. -->
+        <script async src="bundle.js"></script>
+    </head>
+    <body>
+        <div id="app-container">${appHtml}</div>
+
+        <script>
+            // Include the game data so that bundle.js can reference it.
+            var ${constants.APP_STATE_VARIBABLE} = ${JSON.stringify(appState)};
+        </script>
+    </body>
+</html>`;
 
     // TODO: Minify HTML/CSS?
 
-    console.log(documentHtml);
-
-    try {
-        fs.writeFileSync(__dirname + '/../../public/index.html', documentHtml);
-    } catch (error) {
-        console.error('Error writing index.html:', error);
-        return;
-    }
-}
-
-function createBundle(entry: string): Promise<string> {
-    // Optimize/minify bundle.
-    return new Promise((resolve, reject) => {
-        browserify(entry).bundle((error, buffer) => {
-            if (error) {
-                reject(error);
-            } else {
-                const bundle = buffer.toString('utf8');
-
-                // Minify the bundle with UglifyJS.
-                try {
-                    var minifiedBundle = minify(bundle, { fromString: true });
-                } catch (error) {
-                    reject(error);
-                }
-
-                resolve(minifiedBundle.code);
-            }
-        });
-    });
+    return documentHtml;
 }

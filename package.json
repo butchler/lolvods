@@ -4,8 +4,9 @@
   "description": "Semi-spoiler free League of Legends VODs",
   "main": "generate-game-list.js",
   "scripts": {
-    "build": "./node_modules/.bin/tsc --pretty -p src/server && ./node_modules/.bin/tsc --pretty -p src/shared",
-    "server-render": "node --harmony ./src/server/server-render.js"
+    "build": "./node_modules/.bin/tsc --pretty -p src/server && ./node_modules/.bin/tsc --pretty -p src/shared && ./node_modules/.bin/browserify src/client/index.js | uglifyjs > public/bundle.js",
+    "server-render": "node --harmony src/server/server-render.js",
+    "clean": "rm public/index.html public/bundle.js src/server/*.js src/shared/*.js"
   },
   "author": "Adam Buechler",
   "license": "ISC",
