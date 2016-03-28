@@ -1,8 +1,7 @@
 import * as fs from 'fs';
 import * as React from 'react';
 import * as ReactDOMServer from 'react-dom/server';
-import browserify = require('browserify');
-import { minify } from 'uglify-js';
+import { minify } from 'html-minifier';
 
 import * as util from './util';
 import * as constants from '../shared/constants';
@@ -91,7 +90,12 @@ async function main(): Promise<string> {
     </body>
 </html>`;
 
-    // TODO: Minify HTML/CSS?
-
-    return documentHtml;
+    // Minify HTML/CSS
+    return minify(documentHtml, {
+        removeComments: true,
+        collapseWhitespace: true,
+        removeAttributeQuotes: true,
+        minifyCSS: true,
+        minifyJS: true
+    });
 }

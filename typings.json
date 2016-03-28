@@ -1,10 +1,14 @@
 {
   "ambientDependencies": {
     "browserify": "registry:dt/browserify#12.0.1+20160317120654",
+    "clean-css": "registry:dt/clean-css#3.4.9+20160316155526",
+    "html-minifier": "registry:dt/html-minifier#1.1.1+20160316155526",
     "is-my-json-valid": "registry:dt/is-my-json-valid#0.0.0+20160316135805",
     "node": "registry:dt/node#4.0.0+20160319033040",
     "react": "registry:dt/react#0.14.0+20160319053454",
     "react-dom": "registry:dt/react-dom#0.14.0+20160316155526",
+    "relateurl": "registry:dt/relateurl#0.2.6+20160316155526",
+    "source-map": "registry:dt/source-map#0.0.0+20160317120654",
     "uglify-js": "registry:dt/uglify-js#2.6.1+20160316155526"
   }
 }
