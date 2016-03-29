@@ -4,8 +4,8 @@
   "description": "Semi-spoiler free League of Legends VODs",
   "main": "generate-game-list.js",
   "scripts": {
-    "build-server": "./node_modules/.bin/tsc --pretty -p src/server && ./node_modules/.bin/tsc --pretty -p src/shared",
-    "bundle-client": "./node_modules/.bin/browserify src/client/index.js | uglifyjs > public/bundle.js",
+    "build-server": "tsc --pretty -p src/server && tsc --pretty -p src/shared",
+    "bundle-client": "browserify src/client/index.js | uglifyjs --mangle --compress > public/bundle.js",
     "server-render": "node --harmony src/server/server-render.js",
     "build-and-render": "npm run build-server && npm run server-render",
     "clean": "rm public/index.html public/bundle.js public/cached-matches.json src/server/*.js src/shared/*.js"
