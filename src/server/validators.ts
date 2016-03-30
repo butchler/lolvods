@@ -138,6 +138,7 @@ export const matchDetails = validator({
         teams: {
             type: 'array',
             minItems: 2,
+            maxItems: 2,
             uniqueItems: true,
             items: {
                 type: 'object',
