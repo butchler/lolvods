@@ -4,10 +4,12 @@
   "description": "Semi-spoiler free League of Legends VODs",
   "main": "generate-game-list.js",
   "scripts": {
-    "build-server": "tsc --pretty -p src/server && tsc --pretty -p src/shared",
+    "build": "tsc --pretty -p src/server && tsc --pretty -p src/shared",
     "bundle-client": "browserify src/client/index.js | uglifyjs --mangle --compress > public/bundle.js",
     "server-render": "node --harmony src/server/server-render.js",
-    "build-and-render": "npm run build-server && npm run server-render",
+    "build-and-render": "npm run build && npm run server-render",
+    "build-and-bundle": "npm run build && npm run bundle-client",
+    "all": "npm run build && npm run server-render && npm run bundle-client",
     "clean": "rm public/index.html public/bundle.js public/cached-matches.json src/server/*.js src/shared/*.js"
   },
   "author": "Adam Buechler",
