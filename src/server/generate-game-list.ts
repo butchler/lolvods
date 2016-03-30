@@ -97,6 +97,7 @@ function updateWithMatchDetails(match: MatchInfo, matchDetailsJson: string): voi
 
         const extraGameInfo = games[game.id];
         game.gameHash = extraGameInfo.gameHash;
+        // TODO: Cache scaled-down versions of team logos, and maybe even inline them in the page.
         game.teams = extraGameInfo.teams;
         game.videos = extraGameInfo.videos;
     }

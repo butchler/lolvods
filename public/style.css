@@ -1,4 +1,77 @@
+/* General */
 body {
-    background-color: #111111;
+    background-color: black;
     color: white;
+
+    margin: 0;
+
+    text-align: center;
+}
+
+/* Icons */
+.icon {
+    width: 15px;
+    height: 15px;
+}
+.sword-icon {
+    fill: #dd0000;
+}
+.coins-icon {
+    fill: #dddd00;
+}
+.clock-icon {
+    fill: #0088ff;
+}
+
+/* Game list */
+.game-list {
+    display: table;
+    /* Make it so that each row has one set of borders, instead of each cell
+     * having separate borders. */
+    border-collapse: collapse;
+
+    width: 100%;
+    max-width: 1000px;
+    margin: auto;
+
+    text-align: center;
+}
+
+.game-list-header, .game {
+    display: table-row;
+}
+
+a.game {
+    text-decoration: none;
+    color: inherit;
+}
+
+.game-list-header {
+    cursor: default;
+    font-weight: bold;
+}
+
+.game {
+    border-top: 1px solid #666666;
+}
+
+.game:hover {
+    background-color: #111111;
+    border-top: 1px solid white;
+}
+
+.game-list .cell {
+    display: table-cell;
+    padding: 10px;
+}
+
+.teams-cell {
+    text-align: left;
+}
+
+/* Game info */
+.team-logo {
+    /* TODO: Allow for non-square icons. */
+    width: 75px;
+    height: 75px;
 }

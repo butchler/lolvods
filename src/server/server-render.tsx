@@ -66,6 +66,9 @@ async function main(): Promise<string> {
     util.log('Loading CSS.');
     const css = fs.readFileSync(constants.CSS_FILE, 'utf8');
 
+    util.log('Loading icons.');
+    const svgIcons = fs.readFileSync(constants.SVG_ICON_FILE, 'utf8');
+
     const documentHtml =
 `<!doctype html>
 <html>
@@ -81,6 +84,9 @@ async function main(): Promise<string> {
         <script async src="bundle.js"></script>
     </head>
     <body>
+        <!-- Inline the SVG icons into the document so that they can be used via <use> tags. -->
+        ${svgIcons}
+
         <div id="app-container">${appHtml}</div>
 
         <script>

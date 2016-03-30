@@ -7,6 +7,8 @@ export const
     CACHED_MATCHES_FILE = __dirname + '/../../public/cached-matches.json',
     // Location of the CSS to be inlined into the HTML.
     CSS_FILE = __dirname + '/../../public/style.css',
+    // Location of the SVG icon data to be inlined into the HTML.
+    SVG_ICON_FILE = __dirname + '/../../public/icons.svg',
     // The file that the rendered HTML will be saved to.
     OUTPUT_FILE = __dirname + '/../../public/index.html',
     // Get all of the games in the last NUM_DAYS days.
