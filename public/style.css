@@ -10,8 +10,12 @@ body {
 
 /* Icons */
 .icon {
-    width: 15px;
-    height: 15px;
+    width: 20px;
+    height: 20px;
+    /* Move icons slightly down to better align with text. */
+    transform: translateY(3px);
+
+    margin: 0 5px;
 }
 .sword-icon {
     fill: #dd0000;
@@ -41,17 +45,16 @@ body {
     display: table-row;
 }
 
-a.game {
-    text-decoration: none;
-    color: inherit;
-}
-
 .game-list-header {
     cursor: default;
     font-weight: bold;
 }
 
 .game {
+    /* Reset styles inherited from <a> tag. */
+    text-decoration: none;
+    color: inherit;
+
     border-top: 1px solid #666666;
 }
 
@@ -63,6 +66,7 @@ a.game {
 .game-list .cell {
     display: table-cell;
     padding: 10px;
+    vertical-align: middle;
 }
 
 .teams-cell {
@@ -71,7 +75,6 @@ a.game {
 
 /* Game info */
 .team-logo {
-    /* TODO: Allow for non-square icons. */
-    width: 75px;
-    height: 75px;
+    vertical-align: middle;
+    margin-right: 10px;
 }
