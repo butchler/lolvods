@@ -19,7 +19,7 @@ function OptionsForm(props: { options: Options, onChange: ((options: Options) =>
     const { options, onChange } = props;
 
     // TODO: Add filtering and showing/hiding of game info.
-    return <div className="options">Options go here.</div>;
+    return <div className="options"></div>;
 }
 
 function GameList(props: { games: Array<GameInfo>, options: Options }) {
@@ -27,6 +27,7 @@ function GameList(props: { games: Array<GameInfo>, options: Options }) {
 
     return <div className="game-list">
         <div className="game-list-header">
+            <span className="cell"></span>
             <span className="cell">Teams</span>
             <span className="cell">Duration</span>
             <span className="cell">Kills</span>
@@ -38,6 +39,8 @@ function GameList(props: { games: Array<GameInfo>, options: Options }) {
         {games.map((game) => <GameRow key={game.id} game={game} />)}
     </div>;
 }
+
+const MONTH_STRINGS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
 function GameRow(props: { game: GameInfo }) {
     const { game } = props;
@@ -55,9 +58,19 @@ function GameRow(props: { game: GameInfo }) {
         linkProps = { onClick: onVideoNotFound };
     }
 
+    const startTime = new Date(game.stats.startTime);
+    const month = startTime.getMonth();
+    const monthString = MONTH_STRINGS[month];
+    const dayOfMonth = startTime.getDate();
+
     // TODO: Show date/time for game.
     // TODO: Show link to game stats page.
     return <a className="game" {...linkProps}>
+        <span className="cell date-cell">
+            <span className="month">{monthString}</span>
+            <span className="day">{dayOfMonth}</span>
+        </span>
+
         <span className="cell teams-cell">
             {game.teams.map((team) => <Team key={team.id} team={team} />)}
         </span>
@@ -85,9 +98,9 @@ function GameRow(props: { game: GameInfo }) {
         </span>
 
         <span className="cell gold-cell">
-            <span className="gold">{game.stats.teamStats[0].gold}</span>
+            <span className="gold">{game.stats.teamStats[0].gold.toLocaleString()}</span>
             <CoinsIcon />
-            <span className="gold">{game.stats.teamStats[1].gold}</span>
+            <span className="gold">{game.stats.teamStats[1].gold.toLocaleString()}</span>
         </span>
     </a>;
 }

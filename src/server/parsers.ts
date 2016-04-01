@@ -166,7 +166,7 @@ export function gameStats(gameStatsJson: string): GameStats | void {
 
     return {
         durationSeconds: gameStats.gameDuration,
-        startTime: new Date(gameStats.gameCreation),
+        startTime: gameStats.gameCreation,
         teamStats: teamList
     };
 }

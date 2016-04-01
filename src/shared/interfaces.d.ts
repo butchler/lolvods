@@ -43,7 +43,7 @@ export interface ThumbnailInfo {
 }
 
 export interface GameStats {
-    startTime: Date;
+    startTime: number;
     durationSeconds: number;
 
     teamStats: Array<TeamStats>;

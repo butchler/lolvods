@@ -19,7 +19,7 @@ export default async function generateGameList(): Promise<Array<GameInfo>> {
     util.log(`Collected ${gameList.length} games from ${matchList.length} matches.`);
 
     // Sort the games by most recent start time first.
-    gameList.sort((game1, game2) => game2.stats.startTime.valueOf() - game1.stats.startTime.valueOf());
+    gameList.sort((game1, game2) => game2.stats.startTime - game1.stats.startTime);
 
     return gameList;
 }

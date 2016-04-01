@@ -55,12 +55,12 @@ body {
     text-decoration: none;
     color: inherit;
 
-    border-top: 1px solid #666666;
+    border-top: 1px solid #222222;
 }
 
 .game:hover {
-    background-color: #111111;
-    border-top: 1px solid white;
+    border-top: 1px solid #303030;
+    background-color: #171717;
 }
 
 .game-list .cell {
@@ -77,4 +77,22 @@ body {
 .team-logo {
     vertical-align: middle;
     margin-right: 10px;
+}
+
+.date-cell {
+    background: #171717;
+}
+
+.date-cell .month {
+    display: block;
+
+    font-weight: bold;
+    font-size: 24px;
+    letter-spacing: -2px;
+    color: #444444;
+}
+
+.date-cell .day {
+    font-size: 30px;
+    color: #888888;
 }
