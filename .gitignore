@@ -2,5 +2,7 @@
 /public/index.html
 /public/bundle.js
 /public/cached-matches.json
+/public/thumbnail-info.json
+/public/thumbnails/*.png
 /src/**/*.js
 /typings

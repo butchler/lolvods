@@ -2,6 +2,9 @@ import { values, log, error } from './util';
 import { MatchInfo, GameInfo, TeamInfo, GameStats, TeamStats, Dict } from '../shared/interfaces';
 import * as validate from './validators';
 
+// TODO: Store the JSON schemas as plain objects and generate the
+// validators/filters here instead of in validators.ts.
+
 // Takes the JSON map for a
 //
 // http://api.lolesports.com/api/v1/leagues?slug=${leagueSlug}
@@ -93,6 +96,7 @@ export function gamesFromMatchDetails(matchDetailsJson: string): Dict<GameInfo> 
     const teams = new Array<TeamInfo>();
     for (let team of values(matchDetails.teams)) {
         teams.push({
+            id: team.id,
             acronym: team.acronym,
             name: team.name,
             logoUrl: team.logoUrl

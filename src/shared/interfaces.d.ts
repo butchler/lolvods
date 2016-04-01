@@ -29,9 +29,17 @@ export interface GameInfo {
 }
 
 export interface TeamInfo {
+    id: number;
     acronym: string;
     name: string;
     logoUrl: string;
+    thumbnail?: ThumbnailInfo;
+}
+
+export interface ThumbnailInfo {
+    url: string;
+    width: number;
+    height: number;
 }
 
 export interface GameStats {
@@ -49,23 +57,7 @@ export interface TeamStats {
 }
 
 // View interfaces
-export interface AppProps {
-    games: Array<GameInfo>;
-}
-
-export interface AppState {
-    options: Options;
-}
-
 export interface Options {
     // TODO
-}
-
-export interface OptionsProps {
-    onChange: (options: Options) => void;
-}
-
-export interface GameListProps {
-    games: Array<GameInfo>;
-    options: Options;
+    something?: string;
 }

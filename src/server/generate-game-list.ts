@@ -1,8 +1,12 @@
 import * as fs from 'fs';
+import * as uuid from 'node-uuid';
 import * as util from './util';
 import * as parse from './parsers';
-import { GameInfo, GameStats, MatchInfo, Dict } from '../shared/interfaces';
+import { GameInfo, GameStats, MatchInfo, TeamInfo, ThumbnailInfo, Dict } from '../shared/interfaces';
 import * as constants from '../shared/constants';
+import sharp = require('sharp');
+
+// TODO: Make it do at least some calculations asynchronously instead of everything being synchronous.
 
 export default async function generateGameList(): Promise<Array<GameInfo>> {
     const allMatches = await fetchMatchesForLeagues(constants.LEAGUES);
@@ -22,6 +26,7 @@ export default async function generateGameList(): Promise<Array<GameInfo>> {
 
 async function fetchMatchesForLeagues(leagueSlugs: Array<string>): Promise<Dict<MatchInfo>> {
     // Load cached match information.
+    // TODO: Validate JSON for cached matches file.
     let cachedMatches: Dict<MatchInfo> = {};
     try {
         util.log('Reading match cache.');
@@ -36,7 +41,7 @@ async function fetchMatchesForLeagues(leagueSlugs: Array<string>): Promise<Dict<
     const allMatches: Dict<MatchInfo> = {};
     for (let leagueSlug of leagueSlugs) {
         const leagueInfoUrl = `http://api.lolesports.com/api/v1/leagues?slug=${leagueSlug}`;
-        const leagueInfoJson = await util.fetchUrl(leagueInfoUrl);
+        const leagueInfoJson = await util.fetchUrlAsString(leagueInfoUrl);
 
         const matches = parse.matchesFromLeague(leagueInfoJson);
 
@@ -61,16 +66,81 @@ async function fetchMatchesForLeagues(leagueSlugs: Array<string>): Promise<Dict<
 
     util.log('Writing match cache.');
 
-    // Write the updated matche info to the cache.
+    // Write the updated match info to the cache.
     fs.writeFileSync(constants.CACHED_MATCHES_FILE, JSON.stringify(updatedMatches));
 
+    util.log('Updating logo thumbnails.');
+
+    await updateLogoThumbnails(updatedMatches);
+
     return updatedMatches;
+}
+
+async function updateLogoThumbnails(matches: Dict<MatchInfo>): Promise<void> {
+    // Load thumbnail info file.
+    // TODO: Validate JSON for thumbnail info file.
+    let existingThumbnails = {} as Dict<ThumbnailInfo>;
+    try {
+        existingThumbnails = JSON.parse(fs.readFileSync(constants.THUMBNAIL_INFO_FILE, 'utf8'));
+    } catch (error) {
+        util.error(`Error reading thumbnail info file: ${error.message}`);
+    }
+
+    // For each team in the list of matches:
+    for (let match of util.values(matches)) {
+        for (let game of util.values(match.games)) {
+            for (let team of util.values(game.teams)) {
+                // Make the thumbnails be indexed by all of the properties of the
+                // team, so that if any of them change a new thumbnail image will
+                // be generated (just in case the logo image has changed as well).
+                const thumbnailKey = `${team.id}-${team.name}-${team.acronym}-${team.logoUrl}`;
+
+                if (!existingThumbnails.hasOwnProperty(thumbnailKey)) {
+                    // If we don't have a thumbnail for this team's logo already, generate one.
+                    existingThumbnails[thumbnailKey] = await generateTeamLogoThumbnail(team);
+                }
+
+                // TODO: Maybe use an HTTP HEAD request to check if the logo
+                // file has changed since we last generated the thumbnail for
+                // it and regenerate it if so.
+
+                team.thumbnail = existingThumbnails[thumbnailKey];
+            }
+        }
+    }
+
+    // Save the updated thumbnail info.
+    fs.writeFileSync(constants.THUMBNAIL_INFO_FILE, JSON.stringify(existingThumbnails));
+
+    // TODO: Delete old, unused thumbnails.
+}
+
+async function generateTeamLogoThumbnail(team: TeamInfo): Promise<ThumbnailInfo> {
+    // If we don't already have a thumbnail image for the given team logo,
+    // download it, scale it down, and save it.
+
+    // Generate a random filename to save the thumbnail to.
+    // We could just use the team ID or name, but it's possible that the IDs
+    // overlap between different regions, and the name could contain invalid
+    // characters for a filename, such as '/'.
+    const filename = uuid.v4() + '.png';
+
+    // Download the image.
+    const logoImage = await util.fetchUrl(team.logoUrl);
+
+    const thumbnailInfo = await sharp(logoImage)
+                              .resize(constants.THUMBNAIL_MAX_WIDTH, constants.THUMBNAIL_MAX_HEIGHT)
+                              .max()
+                              .toFormat('png')
+                              .toFile(`${constants.THUMBNAIL_FOLDER_PATH}/${filename}`);
+
+    return { url: `${constants.THUMBNAILS_URL}/${filename}`, width: thumbnailInfo.width, height: thumbnailInfo.height };
 }
 
 async function fetchAndUpdateGameInfo(matches: Dict<MatchInfo>) {
     for (let match of util.values(matches)) {
         const matchDetailsUrl = `http://api.lolesports.com/api/v2/highlanderMatchDetails?tournamentId=${match.tournamentId}&matchId=${match.id}`;
-        const matchDetailsJson = await util.fetchUrl(matchDetailsUrl);
+        const matchDetailsJson = await util.fetchUrlAsString(matchDetailsUrl);
 
         updateWithMatchDetails(match, matchDetailsJson);
 
@@ -78,7 +148,7 @@ async function fetchAndUpdateGameInfo(matches: Dict<MatchInfo>) {
         for (let game of util.values(match.games)) {
             // The game stats URL only works with HTTPS.
             const gameStatsUrl = `https://acs.leagueoflegends.com/v1/stats/game/${game.gameRealm}/${game.gameId}?gameHash=${game.gameHash}`;
-            const gameStatsJson = await util.fetchUrl(gameStatsUrl);
+            const gameStatsJson = await util.fetchUrlAsString(gameStatsUrl);
 
             updateWithGameStats(match, game, gameStatsJson);
         }
@@ -86,20 +156,16 @@ async function fetchAndUpdateGameInfo(matches: Dict<MatchInfo>) {
 }
 
 function updateWithMatchDetails(match: MatchInfo, matchDetailsJson: string): void {
-    const games = parse.gamesFromMatchDetails(matchDetailsJson);
+    const extraGameInfo = parse.gamesFromMatchDetails(matchDetailsJson);
 
     for (let game of util.values(match.games)) {
-        if (games[game.id] === undefined) {
+        if (extraGameInfo[game.id] === undefined) {
             util.error(`Dropping game missing from match details: ${JSON.stringify(game)}`);
             delete match.games[game.id];
             continue;
         }
 
-        const extraGameInfo = games[game.id];
-        game.gameHash = extraGameInfo.gameHash;
-        // TODO: Cache scaled-down versions of team logos, and maybe even inline them in the page.
-        game.teams = extraGameInfo.teams;
-        game.videos = extraGameInfo.videos;
+        Object.assign(game, extraGameInfo[game.id]);
     }
 }
 

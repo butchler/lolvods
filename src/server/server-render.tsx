@@ -80,7 +80,10 @@ async function main(): Promise<string> {
         </style>
 
         <!-- Run the script asynchronously so that it can be downloaded
-             in the background while the rest of the page loads. -->
+             in the background while the rest of the page loads.
+             TODO: Maybe use an XMLHttpRequest/dynamically inserted script tag
+             instead of the async attribute, in case there are browser that don't
+             support async?  -->
         <script async src="bundle.js"></script>
     </head>
     <body>

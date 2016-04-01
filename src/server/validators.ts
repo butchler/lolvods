@@ -142,9 +142,10 @@ export const matchDetails = validator({
             uniqueItems: true,
             items: {
                 type: 'object',
-                required: ['acronym', 'name', 'logoUrl'],
+                required: ['id', 'acronym', 'name', 'logoUrl'],
                 additionalProperties: true,
                 properties: {
+                    id: { type: 'number' },
                     acronym: { type: 'string' },
                     name: { type: 'string' },
                     logoUrl: {

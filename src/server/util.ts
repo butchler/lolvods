@@ -65,8 +65,8 @@ export function filterObject(object: Dict<any>, filterCondition: (value: any, ke
     return filteredObject;
 }
 
-export function fetchUrl(url: string): Promise<string> {
-    return new Promise<string>((resolve, reject) => {
+export function fetchUrl(url: string): Promise<Buffer> {
+    return new Promise<Buffer>((resolve, reject) => {
         log(`Fetching URL "${url}"...`);
 
         const protocol = url.startsWith('https:') ? https : http;
@@ -77,18 +77,25 @@ export function fetchUrl(url: string): Promise<string> {
                 return;
             }
 
-            let data = '';
-            response.on('data', (chunk: string) => {
-                data += chunk;
+            const buffers = new Array<Buffer>();
+            response.on('data', (chunk: Buffer) => {
+                buffers.push(chunk)
             });
             response.on('end', () => {
                 log(`Finished fetching URL "${url}"`);
+
+                const data = Buffer.concat(buffers);
                 resolve(data);
             });
         }).on('error', (error: Error) => {
             reject(error);
         });
     });
+}
+
+export async function fetchUrlAsString(url: string, encoding: string = 'utf8'): Promise<string> {
+    const data = await fetchUrl(url);
+    return data.toString(encoding);
 }
 
 // Replacement for console.log that allows us to get a list of log messages so
